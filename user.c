@@ -26,6 +26,6 @@ int main(int argc, char * argv[]) {
         while (token != NULL) {
             printf("%s\n", token);
             token = strtok(NULL, " ");
-        }
+        }       
     }
 }
