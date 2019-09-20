@@ -53,14 +53,9 @@ int main()
 		else if (pid == 0){ //Child process
             printf("dei fork\n");
 
-            int fdTCP, fdUDP, addrlenTCP, addrlenUDP, nTCP, nUDP, newfdTCP, pid;
-            struct addrinfo hintsTCP, hintsUDP, *resTCP, *resUDP;
-            struct sockaddr_in addrTCP, addrUDP;
-
-            memset(&hintsTCP, 0, sizeof(hintsTCP));
-            hintsTCP.ai_family = AF_INET;
-            hintsTCP.ai_socktype = SOCK_STREAM;
-            hintsTCP.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
+            int fdUDP, addrlenUDP, nUDP, pid;
+            struct addrinfo hintsUDP, *resUDP;
+            struct sockaddr_in addrUDP;
 
             memset(&hintsUDP, 0, sizeof(hintsUDP));
             hintsUDP.ai_family = AF_INET;
@@ -68,27 +63,8 @@ int main()
             hintsUDP.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
 
             //--------------------------------------
-
-            nTCP = getaddrinfo(hostname, PORT, &hintsTCP, &resTCP);
-            if (nTCP != 0)
-                exit(1);
-
-            fdTCP = socket(resTCP->ai_family, resTCP->ai_socktype, resTCP->ai_protocol); //create user-dedicated tcp socket
-            if (fd == -1)
-                exit(1);
-
-            nTCP = bind(fdTCP, resTCP->ai_addr, resTCP->ai_addrlen);
-            if (nTCP == -1)
-                exit(1);
-
-            if (listen(fdTCP, 5) == -1) //mark connection socket as passive
-                exit(1);
             
-            if ((newfdTCP = accept(fdTCP, (struct sockaddr *)&addrTCP, &addrlenTCP)) != -1) {
-                printf("Hello!\n");
-                write(newfdTCP, "Oi\n", 4);
-            }
-            else exit(1);
+            write(newfd, "Oi babyyy\n", 11);
 
             //---------------------------------------
 
