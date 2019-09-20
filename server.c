@@ -52,8 +52,12 @@ int main()
 		}
 		else if (pid == 0){ //Child process
             printf("dei fork\n");
+            
+            write(newfd, "Oi babyyy\n", 11);
 
-            int fdUDP, addrlenUDP, nUDP, pid;
+
+            /*
+            int fdUDP, addrlenUDP, nUDP;
             struct addrinfo hintsUDP, *resUDP;
             struct sockaddr_in addrUDP;
 
@@ -61,12 +65,6 @@ int main()
             hintsUDP.ai_family = AF_INET;
             hintsUDP.ai_socktype= SOCK_DGRAM;
             hintsUDP.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
-
-            //--------------------------------------
-            
-            write(newfd, "Oi babyyy\n", 11);
-
-            //---------------------------------------
 
             nUDP = getaddrinfo(hostname, PORT, &hintsUDP, &resUDP);
             if (nUDP != 0) exit(1);
@@ -82,7 +80,7 @@ int main()
             nUDP = sendto(fdUDP, "Oi\n", 4, 0, (struct sockaddr*) &addrUDP, addrlenUDP);
             if (nUDP==-1) exit(1);
 
-            printf("UDP done!\n");
+            printf("UDP done!\n");*/
 
 		}
 		else{ //parent process

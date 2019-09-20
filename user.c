@@ -8,9 +8,40 @@
 #include <stdio.h>
 #include <string.h>
 
+#define PORT "58017"
+
 int main(int argc, char * argv[]) {
     char buffer[1024];
     char * token;
+
+    int fd, addrlen, n;
+    struct addrinfo hints, *res;
+    struct sockaddr_in addr;
+    char sockBuffer[128];
+
+    char hostname[1024];
+    hostname[1023] = '\0';
+    gethostname(hostname, 1023);
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype= SOCK_STREAM;
+    hints.ai_flags = AI_NUMERICSERV;
+
+    n = getaddrinfo(hostname, PORT, &hints, &res);
+    if (n != 0) exit(1);
+
+    fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    if (fd==-1) exit(1);
+
+    n = connect(fd, res->ai_addr, res->ai_addrlen);
+    if (n == -1) exit(1);
+
+    n = read(fd, sockBuffer, 128);
+    if (n == -1) exit(1);
+
+    write(1, "echo: ", 6); write(1, sockBuffer, n);
+
 
     //get input
     
@@ -28,4 +59,9 @@ int main(int argc, char * argv[]) {
             token = strtok(NULL, " ");
         }       
     }
+
+    freeaddrinfo(res);
+    close(fd);
+
+    return 0;
 }
