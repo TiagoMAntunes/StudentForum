@@ -7,20 +7,17 @@
 #include <netdb.h>
 #include <string.h>
 #include <stdio.h>
+#include <signal.h>
+#include <errno.h>
 
+#define ERROR   1
 #define PORT "58017"
+#define max(x, y) (x > y ? x : y)
 
-int main()
-{
-    int fd, addrlen, n, newfd, pid;
-    struct addrinfo hints, *res;
-    struct sockaddr_in addr;
 
-    char hostname[1024];
-    hostname[1023] = '\0';
-    gethostname(hostname, 1023);
+int create_TCP(char* hostname, struct addrinfo hints, struct addrinfo *res) {
+    int n, fd;
 
-    //Create TCP Socket
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
@@ -28,62 +25,110 @@ int main()
 
     n = getaddrinfo(hostname, PORT, &hints, &res);
     if (n != 0)
-        exit(1);
+        exit(ERROR);
 
     fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
     if (fd == -1)
-        exit(1);
+        exit(ERROR);
 
     n = bind(fd, res->ai_addr, res->ai_addrlen);
     if (n == -1)
-        exit(1);
+        exit(ERROR);
 
     if (listen(fd, 5) == -1) //mark connection socket as passive
-        exit(1);
+        exit(ERROR);
+
+    return fd;
+}
+
+int create_UDP(char* hostname, struct addrinfo hints, struct addrinfo *res) {
+    int n, fd;
     
-    while ((newfd = accept(fd, (struct sockaddr *)&addr, &addrlen)) != -1) {
-        printf("Hello!\n");
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
 
-        pid = fork();
-		if (pid < 0)
-		{
-			printf("Unable to fork");
-			exit(1);
-		}
-		else if (pid == 0){ //Child process
-            printf("dei fork\n");
+    n = getaddrinfo(hostname, PORT, &hints, &res);
+    if (n != 0)
+        exit(ERROR);
+
+    fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    if (fd == -1)
+        exit(ERROR);
+
+    n = bind(fd, res->ai_addr, res->ai_addrlen);
+    if (n == -1)
+        exit(ERROR);
+
+    return fd;
+}
+
+int main()
+{
+    int fd_tcp, fd_udp, addrlen, newfd, pid;
+    struct addrinfo hints_tcp, hints_udp, *res_tcp, *res_udp;
+    struct sockaddr_in addr;
+    fd_set set;
+
+    char hostname[1024], buffer[1024];
+    hostname[1023] = '\0';
+    gethostname(hostname, 1023);
+
+    fd_tcp = create_TCP(hostname, hints_tcp, res_tcp);
+    fd_udp = create_UDP(hostname, hints_udp, res_udp);
+
+    //clear descriptor set
+    FD_ZERO(&set);
+
+    int maxfd = max(fd_tcp, fd_udp) + 1;
+
+    for (;;) {
+        FD_SET(fd_tcp, &set);
+        FD_SET(fd_udp, &set);
+
+        int fd_ready = select(maxfd, &set, NULL, NULL, NULL);
+
+        if (FD_ISSET(fd_tcp, &set)) {
+            printf("Receiving from TCP client.\n");
+            if ((newfd = accept(fd_tcp, (struct sockaddr *)&addr, &addrlen)) == -1) 
+                exit(ERROR);  
             
-            write(newfd, "Oi babyyy\n", 11);
+            else {
+                pid = fork();
+                if (pid < 0) {
+                    printf("Unable to fork");
+                    exit(ERROR);
+                }
+                else if (pid == 0){ //Child process
+                    printf("dei fork\n");
+                    write(newfd, "Oi babyyy\n", 11);
+                }
+                else { //parent process
+                }
+            }
+        }
+        if (FD_ISSET(fd_udp, &set)) {
+            printf("Receiving from UDP client.\n");
+            pid = fork();
+            if (pid < 0) {
+                    printf("Unable to fork");
+			        exit(ERROR);
+                }
+                else if (pid == 0){ //Child process
+                    printf("dei fork\n");
+                    int n = recvfrom(fd_udp, buffer, 1024, 0, (struct sockaddr *) &addr, &addrlen);
+                    if (n == -1) 
+                        exit(ERROR);
+     
+                    n = sendto(newfd, "Oi babyyy\n", 11, 0, (struct sockaddr *) &addr, &addrlen);
+                    if (n == -1) 
+                         exit(ERROR);
+                     
+                }
+                else { //parent process
+                }
 
-
-            /*
-            int fdUDP, addrlenUDP, nUDP;
-            struct addrinfo hintsUDP, *resUDP;
-            struct sockaddr_in addrUDP;
-
-            memset(&hintsUDP, 0, sizeof(hintsUDP));
-            hintsUDP.ai_family = AF_INET;
-            hintsUDP.ai_socktype= SOCK_DGRAM;
-            hintsUDP.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
-
-            nUDP = getaddrinfo(hostname, PORT, &hintsUDP, &resUDP);
-            if (nUDP != 0) exit(1);
-
-            fdUDP = socket(resUDP->ai_family, resUDP->ai_socktype, resUDP->ai_protocol);//create user-dedicated udp socket
-            if (fdUDP==-1) exit(1);
-
-            nUDP = bind(fdUDP, resUDP->ai_addr, resUDP->ai_addrlen);
-            if(nUDP==-1) exit(1);
-
-            addrlenUDP = sizeof(addrUDP);
-
-            nUDP = sendto(fdUDP, "Oi\n", 4, 0, (struct sockaddr*) &addrUDP, addrlenUDP);
-            if (nUDP==-1) exit(1);
-
-            printf("UDP done!\n");*/
-
-		}
-		else{ //parent process
-		}
+        }		
     }
 }

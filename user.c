@@ -9,6 +9,26 @@
 #include <string.h>
 
 #define PORT "58017"
+#define ERROR   1
+
+int create_UDP(char* hostname, struct addrinfo hints, struct addrinfo *res) {
+    int n, fd;
+    
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_flags = AI_NUMERICSERV;
+
+    n = getaddrinfo(hostname, PORT, &hints, &res);
+    if (n != 0)
+        exit(ERROR);
+
+    fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    if (fd == -1)
+        exit(ERROR);
+
+    return fd;
+}
 
 int main(int argc, char * argv[]) {
     char buffer[1024];
@@ -22,7 +42,7 @@ int main(int argc, char * argv[]) {
     char hostname[1024];
     hostname[1023] = '\0';
     gethostname(hostname, 1023);
-
+/*
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype= SOCK_STREAM;
@@ -40,9 +60,22 @@ int main(int argc, char * argv[]) {
     n = read(fd, sockBuffer, 128);
     if (n == -1) exit(1);
 
+*/
+
+    int fd_udp = create_UDP(hostname, hints, res);
+    n = sendto(fd, "Oi babyyy\n", 11, 0, res->ai_addr, res->ai_addrlen);
+    if (n == -1) 
+        exit(ERROR);
+     
+
+    addrlen = sizeof(addr);
+    n = recvfrom(fd_udp, sockBuffer, 128, 0, (struct sockaddr *) &addr, &addrlen);
+    printf("%d\n", n);
+    if (n == -1) {
+        exit(ERROR);
+    } 
     write(1, "echo: ", 6); write(1, sockBuffer, n);
-
-
+    
     //get input
     
     fgets(buffer, 1024, stdin);
