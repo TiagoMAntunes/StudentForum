@@ -7,11 +7,12 @@
 #include <netdb.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 
 #define PORT "58017"
 #define ERROR   1
 
-int create_UDP(char* hostname, struct addrinfo hints, struct addrinfo *res) {
+int create_UDP(char* hostname, struct addrinfo hints, struct addrinfo **res) {
     int n, fd;
     
     memset(&hints, 0, sizeof(hints));
@@ -19,11 +20,11 @@ int create_UDP(char* hostname, struct addrinfo hints, struct addrinfo *res) {
     hints.ai_socktype = SOCK_DGRAM;
     hints.ai_flags = AI_NUMERICSERV;
 
-    n = getaddrinfo(hostname, PORT, &hints, &res);
+    n = getaddrinfo(hostname, PORT, &hints, res);
     if (n != 0)
         exit(ERROR);
 
-    fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    fd = socket((*res)->ai_family, (*res)->ai_socktype, (*res)->ai_protocol);
     if (fd == -1)
         exit(ERROR);
 
@@ -62,8 +63,8 @@ int main(int argc, char * argv[]) {
 
 */
 
-    int fd_udp = create_UDP(hostname, hints, res);
-    n = sendto(fd, "Oi babyyy\n", 11, 0, res->ai_addr, res->ai_addrlen);
+    int fd_udp = create_UDP(hostname, hints, &res);
+    n = sendto(fd_udp, "Oi babyyy\n", 11, 0, res->ai_addr, res->ai_addrlen);
     if (n == -1) 
         exit(ERROR);
      
@@ -94,7 +95,6 @@ int main(int argc, char * argv[]) {
     }
 
     freeaddrinfo(res);
-    close(fd);
-
+    close(fd_udp);
     return 0;
 }

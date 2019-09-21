@@ -16,7 +16,7 @@ server.o: server.c
 user.o: user.c
 
 $(OBJS):
-	$(CC) $(CFLAGS) -c -o $@ $<
+	$(CC) $(FLAGS) -c -o $@ $<
 
 clean:
 	rm $(TARGETS) $(OBJS)
