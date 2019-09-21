@@ -69,9 +69,9 @@ int verify_ID(char *stringID) {
     
 }
 
-int receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
+void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
     char *token, *stringID;
-    int n;
+    int n, user_exists;
 
     while (1) {
         fgets(buffer, 1024, stdin);
@@ -89,20 +89,38 @@ int receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
 
                 char message[10];
                 sprintf(message, "REG %d\n", userID);
-                printf("%s\n", message);
                 n = sendto(fd_udp, message, 10, 0, res_udp->ai_addr, res_udp->ai_addrlen);
                 if (n == -1) {
                     exit(ERROR);
                 }
+                // falta recvfrom da confirmacao do server + mostrar ao user
+                user_exists = 1; //depende da resposta do server
+
+                printf(">>> ");
             } 
-            else {
-                
-            }
-            
+            else 
+                printf("Invalid command.\nregister userID / reg userID (5 digits)\n>>> ");
+
+            bzero(buffer, 1024);  
         }
-        if (strcmp(token, "exit") == 0) {
+
+        else if (user_exists && (strcmp(token, "topic_list\n") == 0 || strcmp(token, "tl\n") == 0)) {
+            char message[5];
+            sprintf(message, "LTP\n");
+            n = sendto(fd_udp, message, 4, 0, res_udp->ai_addr, res_udp->ai_addrlen);
+            if (n == -1) {
+                exit(ERROR);
+            }
+        }
+
+        else if (strcmp(token, "exit\n") == 0) {
             printf("Goodbye!\n");
-            
+            break;
+        }
+
+        else {
+            printf("%s\n", token);
+            printf("Unknown command. Try again.\n>>> ");
         }
             
     }
@@ -126,24 +144,8 @@ int main(int argc, char * argv[]) {
     fd_udp = create_UDP(hostname, hints_udp, &res_udp);
 
 
-    printf("Welcome to RC Forum!\n>>> ");
-    int valid = receive_input(buffer, fd_udp, res_udp);
-
- /*   n = sendto(fd_udp, "Oi babyyy\n", 11, 0, res->ai_addr, res->ai_addrlen);
-    if (n == -1) 
-        exit(ERROR);
-     
-
-    addrlen = sizeof(addr);
-    n = recvfrom(fd_udp, sockBuffer, 128, 0, (struct sockaddr *) &addr, &addrlen);
-    printf("%d\n", n);
-    if (n == -1) {
-        exit(ERROR);
-    } 
-    write(1, "echo: ", 6); write(1, sockBuffer, n);
-*/    
-    //get input
-    
+    printf("=== Welcome to RC Forum! ===\n\n>>> ");
+    receive_input(buffer, fd_udp, res_udp);
 
     freeaddrinfo(res_udp);
     close(fd_udp);
