@@ -129,11 +129,35 @@ int main(int argc, char *argv[])
 			        exit(ERROR);
             }
             else if (pid == 0){ //Child process
-                printf("dei fork\n");
+                char * token;
                 printf("Message received: %s\n", buffer);
-                n = sendto(newfd, "Oi babyyy\n", 11, 0, (struct sockaddr *) &addr, &addrlen);
+
+                token = strtok(buffer, " \n");
+
+                if (strcmp(token, "REG") == 0) {
+                    //validate user number
+
+                    n = sendto(fd_udp, "RGR OK\n", 7, 0, (struct sockaddr *) &addr, &addrlen);
+                } else if (strcmp(token, "LTP") == 0) {
+                    
+
+                    n = sendto(fd_udp, "LTR 3 (topic:userID)\n", 21, 0, (struct sockaddr *) &addr, &addrlen);
+                } else if (strcmp(token, "PTP") == 0) {
+                    
+
+                    n = sendto(fd_udp, "PTR OK", 7, 0, (struct sockaddr *) &addr, &addrlen);
+                } else if (strcmp(token, "LQU") == 0) {
+  
+
+                    n = sendto(fd_udp, "LQR 5 (question:userID:NA )\n", 28, 0, (struct sockaddr *) &addr, &addrlen);
+                }
+                
+
+
+
                 if (n == -1) 
-                        exit(ERROR);   
+                        exit(ERROR);
+                exit(0); //child terminated its job   
             }
             else { //parent process
                 memset(buffer,0, 1024);
