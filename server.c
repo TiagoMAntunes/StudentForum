@@ -11,8 +11,9 @@
 #include <errno.h>
 
 #define ERROR   1
-#define PORT "58017"
 #define max(x, y) (x > y ? x : y)
+
+char port[6] = "58017";
 
 
 int create_TCP(char* hostname, struct addrinfo hints, struct addrinfo *res) {
@@ -23,7 +24,7 @@ int create_TCP(char* hostname, struct addrinfo hints, struct addrinfo *res) {
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
 
-    n = getaddrinfo(hostname, PORT, &hints, &res);
+    n = getaddrinfo(hostname, port, &hints, &res);
     if (n != 0)
         exit(ERROR);
 
@@ -49,7 +50,7 @@ int create_UDP(char* hostname, struct addrinfo hints, struct addrinfo *res) {
     hints.ai_socktype = SOCK_DGRAM;
     hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
 
-    n = getaddrinfo(hostname, PORT, &hints, &res);
+    n = getaddrinfo(hostname, port, &hints, &res);
     if (n != 0)
         exit(ERROR);
 
@@ -64,7 +65,8 @@ int create_UDP(char* hostname, struct addrinfo hints, struct addrinfo *res) {
     return fd;
 }
 
-int main()
+
+int main(int argc, char *argv[])
 {
     int fd_tcp, fd_udp, addrlen, newfd, pid;
     struct addrinfo hints_tcp, hints_udp, *res_tcp, *res_udp;
@@ -74,6 +76,13 @@ int main()
     char hostname[1024], buffer[1024];
     hostname[1023] = '\0';
     gethostname(hostname, 1023);
+
+    if(argc==3){//custom port was set
+        if(strcmp(argv[1], "-p") == 0){
+            strcpy(port, argv[2]);
+            printf("new port is %s\n", port);
+        }
+    }
 
     fd_tcp = create_TCP(hostname, hints_tcp, res_tcp);
     fd_udp = create_UDP(hostname, hints_udp, res_udp);
@@ -123,8 +132,7 @@ int main()
      
                     n = sendto(newfd, "Oi babyyy\n", 11, 0, (struct sockaddr *) &addr, &addrlen);
                     if (n == -1) 
-                         exit(ERROR);
-                     
+                         exit(ERROR);   
                 }
                 else { //parent process
                 }
@@ -132,3 +140,4 @@ int main()
         }		
     }
 }
+
