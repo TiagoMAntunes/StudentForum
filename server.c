@@ -114,6 +114,7 @@ int main(int argc, char *argv[])
                     write(newfd, "Oi babyyy\n", 11);
                 }
                 else { //parent process
+                    close(newfd);
                 }
             }
         }
