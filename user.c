@@ -12,6 +12,27 @@
 #define PORT "58017"
 #define ERROR   1
 
+int create_TCP(char* hostname, struct addrinfo hints, struct addrinfo *res) {
+    int n, fd;
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_NUMERICSERV;
+
+    n = getaddrinfo(hostname, PORT, &hints, &res);
+    if (n != 0)
+        exit(ERROR);
+
+    fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    if (fd==-1) exit(1);
+
+    n = connect(fd, res->ai_addr, res->ai_addrlen);
+    if (n == -1) exit(1);
+
+    return fd;
+}
+
 int create_UDP(char* hostname, struct addrinfo hints, struct addrinfo **res) {
     int n, fd;
     
@@ -31,40 +52,84 @@ int create_UDP(char* hostname, struct addrinfo hints, struct addrinfo **res) {
     return fd;
 }
 
+int verify_ID(char *stringID) {
+
+    int i = 0;
+    while (stringID[i] != '\n') {
+        if (stringID[i] > '9' || stringID[i] < 0)
+            return 0;
+        i++;
+    }
+
+    if (i != 5) 
+        return 0;
+
+    return 1;
+
+    
+}
+
+int receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
+    char *token, *stringID;
+    int n;
+
+    while (1) {
+        fgets(buffer, 1024, stdin);
+        token = strtok(buffer, " ");
+        
+        if (strcmp(token, "reg") == 0 || strcmp(token, "register") == 0) {
+            int userID, count_info = 0;
+
+            token = strtok(NULL, " ");
+            stringID = strdup(token);
+
+            if (verify_ID(stringID)) {
+                userID = atoi(stringID);
+                free(stringID);
+
+                char message[10];
+                sprintf(message, "REG %d\n", userID);
+                printf("%s\n", message);
+                n = sendto(fd_udp, message, 10, 0, res_udp->ai_addr, res_udp->ai_addrlen);
+                if (n == -1) {
+                    exit(ERROR);
+                }
+            } 
+            else {
+                
+            }
+            
+        }
+        if (strcmp(token, "exit") == 0) {
+            printf("Goodbye!\n");
+            
+        }
+            
+    }
+}
+
 int main(int argc, char * argv[]) {
     char buffer[1024];
     char * token;
 
-    int fd, addrlen, n;
-    struct addrinfo hints, *res;
+    int n, fd_udp;
+    socklen_t addrlen;
+    struct addrinfo hints_udp, *res_udp;
     struct sockaddr_in addr;
     char sockBuffer[128];
 
     char hostname[1024];
     hostname[1023] = '\0';
     gethostname(hostname, 1023);
-/*
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET;
-    hints.ai_socktype= SOCK_STREAM;
-    hints.ai_flags = AI_NUMERICSERV;
 
-    n = getaddrinfo(hostname, PORT, &hints, &res);
-    if (n != 0) exit(1);
 
-    fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-    if (fd==-1) exit(1);
+    fd_udp = create_UDP(hostname, hints_udp, &res_udp);
 
-    n = connect(fd, res->ai_addr, res->ai_addrlen);
-    if (n == -1) exit(1);
 
-    n = read(fd, sockBuffer, 128);
-    if (n == -1) exit(1);
+    printf("Welcome to RC Forum!\n>>> ");
+    int valid = receive_input(buffer, fd_udp, res_udp);
 
-*/
-
-    int fd_udp = create_UDP(hostname, hints, &res);
-    n = sendto(fd_udp, "Oi babyyy\n", 11, 0, res->ai_addr, res->ai_addrlen);
+ /*   n = sendto(fd_udp, "Oi babyyy\n", 11, 0, res->ai_addr, res->ai_addrlen);
     if (n == -1) 
         exit(ERROR);
      
@@ -76,25 +141,12 @@ int main(int argc, char * argv[]) {
         exit(ERROR);
     } 
     write(1, "echo: ", 6); write(1, sockBuffer, n);
-    
+*/    
     //get input
     
-    fgets(buffer, 1024, stdin);
-    if ((token = strchr(buffer, '\n')) != NULL)
-        *token = '\0'; //remove last \n if it exists
 
-
-    token = strtok(buffer, " ");
-    
-    if (strcmp(token, "reg") == 0 || strcmp(token, "register") == 0) {
-        token = strtok(NULL, " ");
-        while (token != NULL) {
-            printf("%s\n", token);
-            token = strtok(NULL, " ");
-        }       
-    }
-
-    freeaddrinfo(res);
+    freeaddrinfo(res_udp);
     close(fd_udp);
+
     return 0;
 }
