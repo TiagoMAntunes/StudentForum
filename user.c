@@ -12,7 +12,7 @@
 #define PORT "58017"
 #define ERROR   1
 
-int topic_number;
+int topic_number = -1;
 char * topic;
 int userID;
 int create_TCP(char* hostname, struct addrinfo hints, struct addrinfo *res) {
@@ -143,6 +143,26 @@ void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
             free(propose_topic);
         }
 
+        else if (strcmp(token, "question_list\n") == 0|| strcmp(token, "ql\n") == 0) {
+            printf("Entered with token: %p\n", topic);
+            char * message;
+            if (topic != NULL) {
+                message = malloc(sizeof(char) * (strlen(topic) + 5));
+                sprintf(message, "LQU %s\n", topic);    
+            }
+            else { 
+                message = malloc(sizeof(char) * 17);
+                sprintf(message, "LQU %d\n", topic_number);
+            }
+            n = sendto(fd_udp, message, strlen(message), 0, res_udp->ai_addr, res_udp->ai_addrlen);
+            if (n == -1) {
+                exit(ERROR);
+            }
+
+            //get answer
+
+
+        }
         else if (strcmp(token, "exit\n") == 0) {
             printf("Goodbye!\n");
             break;

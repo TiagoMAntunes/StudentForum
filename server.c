@@ -130,12 +130,13 @@ int main(int argc, char *argv[])
             }
             else if (pid == 0){ //Child process
                 printf("dei fork\n");
-    
+                printf("Message received: %s\n", buffer);
                 n = sendto(newfd, "Oi babyyy\n", 11, 0, (struct sockaddr *) &addr, &addrlen);
                 if (n == -1) 
                         exit(ERROR);   
             }
             else { //parent process
+                memset(buffer,0, 1024);
             }
         }		
     }
