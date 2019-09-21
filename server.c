@@ -119,24 +119,23 @@ int main(int argc, char *argv[])
         }
         if (FD_ISSET(fd_udp, &set)) {
             printf("Receiving from UDP client.\n");
+            int n = recvfrom(fd_udp, buffer, 1024, 0, (struct sockaddr *) &addr, &addrlen);
+            if (n == -1) 
+                exit(ERROR);
             pid = fork();
             if (pid < 0) {
                     printf("Unable to fork");
 			        exit(ERROR);
-                }
-                else if (pid == 0){ //Child process
-                    printf("dei fork\n");
-                    int n = recvfrom(fd_udp, buffer, 1024, 0, (struct sockaddr *) &addr, &addrlen);
-                    if (n == -1) 
-                        exit(ERROR);
-     
-                    n = sendto(newfd, "Oi babyyy\n", 11, 0, (struct sockaddr *) &addr, &addrlen);
-                    if (n == -1) 
-                         exit(ERROR);   
-                }
-                else { //parent process
-                }
-
+            }
+            else if (pid == 0){ //Child process
+                printf("dei fork\n");
+    
+                n = sendto(newfd, "Oi babyyy\n", 11, 0, (struct sockaddr *) &addr, &addrlen);
+                if (n == -1) 
+                        exit(ERROR);   
+            }
+            else { //parent process
+            }
         }		
     }
 }
