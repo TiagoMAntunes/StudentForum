@@ -12,6 +12,9 @@
 #define PORT "58017"
 #define ERROR   1
 
+int topic_number;
+char * topic;
+int userID;
 int create_TCP(char* hostname, struct addrinfo hints, struct addrinfo *res) {
     int n, fd;
 
@@ -78,7 +81,7 @@ void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
         token = strtok(buffer, " ");
         
         if (strcmp(token, "reg") == 0 || strcmp(token, "register") == 0) {
-            int userID, count_info = 0;
+            int count_info = 0;
 
             token = strtok(NULL, " ");
             stringID = strdup(token);
@@ -95,11 +98,9 @@ void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
                 }
                 // falta recvfrom da confirmacao do server + mostrar ao user
                 user_exists = 1; //depende da resposta do server
-
-                printf(">>> ");
             } 
             else 
-                printf("Invalid command.\nregister userID / reg userID (5 digits)\n>>> ");
+                printf("Invalid command.\nregister userID / reg userID (5 digits)\n");
 
             bzero(buffer, 1024);  
         }
@@ -112,6 +113,35 @@ void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
                 exit(ERROR);
             }
         }
+        else if (strcmp(token, "topic_select") == 0 || strcmp(token, "ts") == 0) {
+            char type = strcmp(token, "ts") == 0 ? 1 : 0; //1 if must read number
+            if (topic != NULL) {free(topic); topic = NULL;}
+            topic_number = -1;
+            token = strtok(NULL, " ");
+            if (type)
+                topic_number = atoi(token);
+            else
+                topic = strdup(token);
+            //TODO: needs better parsing
+        }
+
+        else if (strcmp(token, "topic_propose") == 0 || strcmp(token, "tp") == 0) {
+            char * propose_topic, * message;
+            token = strtok(NULL, " ");
+            propose_topic = strdup(token);
+            message = malloc(sizeof(char) * (strlen(propose_topic) + 12));
+            sprintf(message, "PTP %d %s\n", userID, propose_topic);
+            n = sendto(fd_udp, message, strlen(message), 0, res_udp->ai_addr, res_udp->ai_addrlen);
+            if (n == -1) {
+                exit(ERROR);
+            }
+
+
+            //needs to get answer
+
+            free(message);
+            free(propose_topic);
+        }
 
         else if (strcmp(token, "exit\n") == 0) {
             printf("Goodbye!\n");
@@ -120,9 +150,9 @@ void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
 
         else {
             printf("%s\n", token);
-            printf("Unknown command. Try again.\n>>> ");
+            printf("Unknown command. Try again.\n");
         }
-            
+        printf(">>> "); 
     }
 }
 
