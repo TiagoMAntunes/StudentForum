@@ -112,9 +112,7 @@ void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
                 free(message);
             } 
             else 
-                printf("Invalid command.\nregister userID / reg userID (5 digits)\n");
-
-            bzero(buffer, 1024);  
+                printf("Invalid command.\nregister userID / reg userID (5 digits)\n"); 
         }
 
         else if (user_exists && (strcmp(token, "topic_list\n") == 0 || strcmp(token, "tl\n") == 0)) {
@@ -133,7 +131,7 @@ void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
             short_cmmd = (strcmp(token, "ts") == 0 ? 1 : 0);
             token = strtok(NULL, " ");
             char *temp_topic = strdup(token);
-            if (!select_topic(topic, short_commd)) {
+            if (!select_topic(topic, short_cmmd)) {
                 printf("Invalid topic selected.\n");
             }
 

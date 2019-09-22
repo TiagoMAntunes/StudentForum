@@ -139,13 +139,15 @@ int main(int argc, char *argv[])
                 token = strtok(buffer, " \n");
 
                 if (strcmp(token, "REG") == 0) {
-                    //validate user number
-                    printf("Trying to send info to %d %p %d\n", fd_udp, &addr, addrlen);
+                    // TODO validate user number
+          //        printf("Trying to send info to %d %p %d\n", fd_udp, &addr, addrlen);
                     n = sendto(fd_udp, "RGR OK\n", 7, 0, (struct sockaddr *) &addr, addrlen);
+
                 } else if (strcmp(token, "LTP") == 0) {
                     
 
                     n = sendto(fd_udp, "LTR 3 (topic:userID)\n", 21, 0, (struct sockaddr *) &addr, addrlen);
+               
                 } else if (strcmp(token, "PTP") == 0) {
                     
 
