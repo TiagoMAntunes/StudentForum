@@ -19,6 +19,9 @@ char port[6] = "58017";
 int create_TCP(char* hostname, struct addrinfo hints, struct addrinfo *res) {
     int n, fd;
 
+    //THERE MIGHT BE AN ERROR HERE BECAUSE res WILL NOT SAVE THE VALUE CORRECTLY
+    //SEE create_UDP FUNCTION
+
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
@@ -42,7 +45,7 @@ int create_TCP(char* hostname, struct addrinfo hints, struct addrinfo *res) {
     return fd;
 }
 
-int create_UDP(char* hostname, struct addrinfo hints, struct addrinfo *res) {
+int create_UDP(char* hostname, struct addrinfo hints, struct addrinfo **res) {
     int n, fd;
     
     memset(&hints, 0, sizeof(hints));
@@ -50,15 +53,15 @@ int create_UDP(char* hostname, struct addrinfo hints, struct addrinfo *res) {
     hints.ai_socktype = SOCK_DGRAM;
     hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
 
-    n = getaddrinfo(hostname, port, &hints, &res);
+    n = getaddrinfo(hostname, port, &hints, res);
     if (n != 0)
         exit(ERROR);
 
-    fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    fd = socket((*res)->ai_family, (*res)->ai_socktype, (*res)->ai_protocol);
     if (fd == -1)
         exit(ERROR);
 
-    n = bind(fd, res->ai_addr, res->ai_addrlen);
+    n = bind(fd, (*res)->ai_addr, (*res)->ai_addrlen);
     if (n == -1)
         exit(ERROR);
 
@@ -85,7 +88,7 @@ int main(int argc, char *argv[])
     }
 
     fd_tcp = create_TCP(hostname, hints_tcp, res_tcp);
-    fd_udp = create_UDP(hostname, hints_udp, res_udp);
+    fd_udp = create_UDP(hostname, hints_udp, &res_udp);
 
     //clear descriptor set
     FD_ZERO(&set);
@@ -136,25 +139,23 @@ int main(int argc, char *argv[])
 
                 if (strcmp(token, "REG") == 0) {
                     //validate user number
-
-                    n = sendto(fd_udp, "RGR OK\n", 7, 0, (struct sockaddr *) &addr, &addrlen);
+                    printf("Trying to send info to %d %p %d\n", fd_udp, &addr, addrlen);
+                    n = sendto(fd_udp, "RGR OK\n", 7, 0, (struct sockaddr *) &addr, addrlen);
                 } else if (strcmp(token, "LTP") == 0) {
                     
 
-                    n = sendto(fd_udp, "LTR 3 (topic:userID)\n", 21, 0, (struct sockaddr *) &addr, &addrlen);
+                    n = sendto(fd_udp, "LTR 3 (topic:userID)\n", 21, 0, (struct sockaddr *) &addr, addrlen);
                 } else if (strcmp(token, "PTP") == 0) {
                     
 
-                    n = sendto(fd_udp, "PTR OK", 7, 0, (struct sockaddr *) &addr, &addrlen);
+                    n = sendto(fd_udp, "PTR OK", 7, 0, (struct sockaddr *) &addr, addrlen);
                 } else if (strcmp(token, "LQU") == 0) {
   
 
-                    n = sendto(fd_udp, "LQR 5 (question:userID:NA )\n", 28, 0, (struct sockaddr *) &addr, &addrlen);
+                    n = sendto(fd_udp, "LQR 5 (question:userID:NA )\n", 28, 0, (struct sockaddr *) &addr, addrlen);
                 }
                 
-
-
-
+                printf("n:%d errno:%d\n", n, errno);
                 if (n == -1) 
                         exit(ERROR);
                 exit(0); //child terminated its job   

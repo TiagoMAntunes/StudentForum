@@ -75,7 +75,7 @@ int verify_ID(char *stringID) {
 void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
     char *token, *stringID;
     int n, user_exists;
-
+    char answer[1024];
     while (1) {
         fgets(buffer, 1024, stdin);
         token = strtok(buffer, " ");
@@ -96,7 +96,9 @@ void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
                 if (n == -1) {
                     exit(ERROR);
                 }
-                // falta recvfrom da confirmacao do server + mostrar ao user
+                
+                n = recvfrom(fd_udp, answer, 1024, 0, res_udp->ai_addr, res_udp->ai_addrlen);
+                printf("%s\n", answer);
                 user_exists = 1; //depende da resposta do server
             } 
             else 
