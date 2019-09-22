@@ -71,7 +71,8 @@ int create_UDP(char* hostname, struct addrinfo hints, struct addrinfo **res) {
 
 int main(int argc, char *argv[])
 {
-    int fd_tcp, fd_udp, addrlen, newfd, pid;
+    int fd_tcp, fd_udp, newfd, pid;
+    socklen_t addrlen;
     struct addrinfo hints_tcp, hints_udp, *res_tcp, *res_udp;
     struct sockaddr_in addr;
     fd_set set;

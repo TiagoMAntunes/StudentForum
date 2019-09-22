@@ -15,6 +15,7 @@
 int topic_number = -1;
 char * topic;
 int userID;
+
 int create_TCP(char* hostname, struct addrinfo hints, struct addrinfo *res) {
     int n, fd;
 
@@ -72,17 +73,24 @@ int verify_ID(char *stringID) {
     
 }
 
+int select_topic(char *temp_topic, int short_cmmd) {
+    /* TODO:
+            - if short cmd, verify that its a nbr
+            - verify if given topic exists
+    */
+}
+
 void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
     char *token, *stringID;
-    int n, user_exists;
+    int n, user_exists, short_cmmd = 0;
     char answer[1024];
+
     while (1) {
+        bzero(buffer, 1024);
         fgets(buffer, 1024, stdin);
         token = strtok(buffer, " ");
         
         if (strcmp(token, "reg") == 0 || strcmp(token, "register") == 0) {
-            int count_info = 0;
-
             token = strtok(NULL, " ");
             stringID = strdup(token);
 
@@ -90,16 +98,18 @@ void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
                 userID = atoi(stringID);
                 free(stringID);
 
-                char message[10];
+                char *message = malloc(sizeof(char) * 11);
                 sprintf(message, "REG %d\n", userID);
-                n = sendto(fd_udp, message, 10, 0, res_udp->ai_addr, res_udp->ai_addrlen);
+                n = sendto(fd_udp, message, 11, 0, res_udp->ai_addr, res_udp->ai_addrlen);
                 if (n == -1) {
                     exit(ERROR);
                 }
                 
-                n = recvfrom(fd_udp, answer, 1024, 0, res_udp->ai_addr, res_udp->ai_addrlen);
+                n = recvfrom(fd_udp, answer, 1024, 0, res_udp->ai_addr, &res_udp->ai_addrlen);
                 printf("%s\n", answer);
                 user_exists = 1; //depende da resposta do server
+
+                free(message);
             } 
             else 
                 printf("Invalid command.\nregister userID / reg userID (5 digits)\n");
@@ -108,14 +118,28 @@ void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
         }
 
         else if (user_exists && (strcmp(token, "topic_list\n") == 0 || strcmp(token, "tl\n") == 0)) {
-            char message[5];
+            char *message = malloc(sizeof(char) * 5);
             sprintf(message, "LTP\n");
             n = sendto(fd_udp, message, 4, 0, res_udp->ai_addr, res_udp->ai_addrlen);
             if (n == -1) {
                 exit(ERROR);
             }
+            free(message);
+
+            // receive list of topics
         }
-        else if (strcmp(token, "topic_select") == 0 || strcmp(token, "ts") == 0) {
+
+        else if (user_exists && (strcmp(token, "topic_select") == 0 || strcmp(token, "ts")) == 0) {
+            short_cmmd = (strcmp(token, "ts") == 0 ? 1 : 0);
+            token = strtok(NULL, " ");
+            char *temp_topic = strdup(token);
+            if (!select_topic(topic, short_commd)) {
+                printf("Invalid topic selected.\n");
+            }
+
+            free(temp_topic);
+
+    /*       
             char type = strcmp(token, "ts") == 0 ? 1 : 0; //1 if must read number
             if (topic != NULL) {free(topic); topic = NULL;}
             topic_number = -1;
@@ -125,10 +149,11 @@ void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
             else
                 topic = strdup(token);
             //TODO: needs better parsing
-        }
+     */   }
 
-        else if (strcmp(token, "topic_propose") == 0 || strcmp(token, "tp") == 0) {
-            char * propose_topic, * message;
+        else if (user_exists && (strcmp(token, "topic_propose") == 0 || strcmp(token, "tp") == 0)) {
+            char *propose_topic, *message;
+
             token = strtok(NULL, " ");
             propose_topic = strdup(token);
             message = malloc(sizeof(char) * (strlen(propose_topic) + 12));
@@ -150,11 +175,11 @@ void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
             char * message;
             if (topic != NULL) {
                 message = malloc(sizeof(char) * (strlen(topic) + 5));
-                sprintf(message, "LQU %s\n", topic);    
+                sprintf(message, "LQU %s\n", topic);   
             }
             else { 
                 message = malloc(sizeof(char) * 17);
-                sprintf(message, "LQU %d\n", topic_number);
+                sprintf(message, "LQU %d\n", topic_number);  
             }
             n = sendto(fd_udp, message, strlen(message), 0, res_udp->ai_addr, res_udp->ai_addrlen);
             if (n == -1) {
@@ -163,7 +188,7 @@ void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
 
             //get answer
 
-
+            free(message);
         }
         else if (strcmp(token, "exit\n") == 0) {
             printf("Goodbye!\n");
@@ -180,13 +205,12 @@ void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
 
 int main(int argc, char * argv[]) {
     char buffer[1024];
-    char * token;
 
-    int n, fd_udp;
-    socklen_t addrlen;
+    int fd_udp;
+//    socklen_t addrlen;
     struct addrinfo hints_udp, *res_udp;
-    struct sockaddr_in addr;
-    char sockBuffer[128];
+//   struct sockaddr_in addr;
+//   char sockBuffer[128];
 
     char hostname[1024];
     hostname[1023] = '\0';
