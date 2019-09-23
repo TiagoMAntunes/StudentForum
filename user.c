@@ -77,7 +77,7 @@ int verify_ID(char *stringID) {
 }
 
 int topic_exists(char *topic) {
-    // TODO 
+    // TODO falta guardar a lista de topicos
     return 1;
 }
 
@@ -180,20 +180,27 @@ void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
         else if (user_exists && (strcmp(token, "topic_propose") == 0 || strcmp(token, "tp") == 0)) {
             char *propose_topic, *message;
 
-            token = strtok(NULL, " ");
+
+            token = strtok(NULL, " \n");
             propose_topic = strdup(token);
-            message = malloc(sizeof(char) * (strlen(propose_topic) + 12));
-            sprintf(message, "PTP %d %s\n", userID, propose_topic);
-            n = sendto(fd_udp, message, strlen(message), 0, res_udp->ai_addr, res_udp->ai_addrlen);
-            if (n == -1) {
-                exit(ERROR);
+            token = strtok(NULL, " ");
+            if (token == NULL) {
+                message = malloc(sizeof(char) * (strlen(propose_topic) + 12));
+                sprintf(message, "PTP %d %s\n", userID, propose_topic);
+                n = sendto(fd_udp, message, strlen(message), 0, res_udp->ai_addr, res_udp->ai_addrlen);
+                if (n == -1) {
+                    exit(ERROR);
+                }
+
+                n = recvfrom(fd_udp, answer, 1024, 0, res_udp->ai_addr, &res_udp->ai_addrlen);
+                printf("%s\n", answer);
+
+                free(message);
+                free(propose_topic);
             }
-
-            n = recvfrom(fd_udp, answer, 1024, 0, res_udp->ai_addr, &res_udp->ai_addrlen);
-            printf("%s\n", answer);
-
-            free(message);
-            free(propose_topic);
+            else 
+                printf("Invalid command.\ntopic_propose topic / tp topic\n");
+            
         }
 
         else if (user_exists && (strcmp(token, "question_list\n") == 0|| strcmp(token, "ql\n")) == 0) {

@@ -9,8 +9,14 @@
 #include <stdio.h>
 #include <signal.h>
 #include <errno.h>
+#include "hash.h"
+#include "list.h"
+#include "topic.h"
+#include "iterator.h"
 
-#define ERROR   1
+#define ERROR       1
+#define MAX_TOPICS  10
+
 #define max(x, y) (x > y ? x : y)
 
 char port[6] = "58017";
@@ -68,6 +74,26 @@ int create_UDP(char* hostname, struct addrinfo hints, struct addrinfo **res) {
     return fd;
 }
 
+int registered_user(Hash *users, int userID) {
+    // TODO verificar se o user esta registado
+    
+    return 1;
+}
+
+int topic_exists(Hash* topics, char* topic_title) { 
+    List *head = findInTable(topics, hash(topic_title));
+    Iterator *it = createIterator(head);
+    printf("Hash value: %lu\n", hash(topic_title));
+    while (hasNext(it)) {
+        printf("in while\n");
+        if (strcmp(getTopicTitle(current(next(it))), topic_title) == 0) {
+            killIterator(it);
+            return 1;
+        }
+    }
+    killIterator(it);
+    return 0;
+}
 
 int main(int argc, char *argv[])
 {
@@ -76,6 +102,10 @@ int main(int argc, char *argv[])
     struct addrinfo hints_tcp, hints_udp, *res_tcp, *res_udp;
     struct sockaddr_in addr;
     fd_set set;
+    Hash *topics = createTable(1024, sizeof(List));
+    Hash *users = createTable(1024, sizeof(List));
+    int n_topics = 0; 
+
 
     char hostname[1024], buffer[1024];
     hostname[1023] = '\0';
@@ -140,7 +170,8 @@ int main(int argc, char *argv[])
 
                 if (strcmp(token, "REG") == 0) {
                     // TODO validate user number
-          //        printf("Trying to send info to %d %p %d\n", fd_udp, &addr, addrlen);
+                    //printf("Trying to send info to %d %p %d\n", fd_udp, &addr, addrlen);
+                    //TODO add user  
                     n = sendto(fd_udp, "RGR OK\n", 7, 0, (struct sockaddr *) &addr, addrlen);
 
                 } else if (strcmp(token, "LTP") == 0) {
@@ -149,7 +180,44 @@ int main(int argc, char *argv[])
                     n = sendto(fd_udp, "LTR 3 (topic:userID)\n", 21, 0, (struct sockaddr *) &addr, addrlen);
                
                 } else if (strcmp(token, "PTP") == 0) {
+                    token = strtok(NULL, " ");
+                    char *stringID = strdup(token);
+                    token = strtok(NULL, " ");
+                    char *topic_title = strdup(token);
+                    token = strtok(NULL, " ");
+
+                    if (n_topics == MAX_TOPICS) {
+                        n = sendto(fd_udp, "PTR FUL", 8, 0, (struct sockaddr *) &addr, addrlen);
+                        if (n == -1) 
+                            exit(ERROR);
+                    }
+
+                    else if (token != NULL || !registered_user(users, atoi(stringID)) || strlen(topic_title) > 10) {
+                        n = sendto(fd_udp, "PTR NOK", 8, 0, (struct sockaddr *) &addr, addrlen);
+                        if (n == -1) 
+                            exit(ERROR);
+                    }
+
+                    else if (topic_exists(topics, topic_title)) {
+                        n = sendto(fd_udp, "PTR DUP", 8, 0, (struct sockaddr *) &addr, addrlen);
+                        if (n == -1) 
+                            exit(ERROR);  
+                    }
+
+                    else {
+                        Topic* new = createTopic(topic_title, atoi(stringID));
+                        insertInTable(topics, new, hash(topic_title)); 
+                        n_topics++;                       
+
+                        n = sendto(fd_udp, "PTR OK", 7, 0, (struct sockaddr *) &addr, addrlen);
+                        if (n == -1) 
+                            exit(ERROR); 
+                    }
+
+                    free(stringID);
+                    free(topic_title);
                     
+
 
                     n = sendto(fd_udp, "PTR OK", 7, 0, (struct sockaddr *) &addr, addrlen);
                 } else if (strcmp(token, "LQU") == 0) {
