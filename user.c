@@ -21,7 +21,7 @@ char *question = NULL;
 
 int userID;
 
-int create_TCP(char* hostname, struct addrinfo hints, struct addrinfo *res) {
+int create_TCP(char* hostname, struct addrinfo hints, struct addrinfo **res) {
     int n, fd;
 
     memset(&hints, 0, sizeof(hints));
@@ -29,15 +29,12 @@ int create_TCP(char* hostname, struct addrinfo hints, struct addrinfo *res) {
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_NUMERICSERV;
 
-    n = getaddrinfo("zezere.tecnico.ulisboa.pt", PORT, &hints, &res);
+    n = getaddrinfo(hostname, PORT, &hints, res);
     if (n != 0)
         exit(ERROR);
 
-    fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    fd = socket((*res)->ai_family, (*res)->ai_socktype, (*res)->ai_protocol);
     if (fd==-1) exit(1);
-
-    n = connect(fd, res->ai_addr, res->ai_addrlen);
-    if (n == -1) exit(1);
 
     return fd;
 }
@@ -240,7 +237,7 @@ void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
             token = strtok(NULL, " ");
             char *temp_question = strdup(token);
 
-            // TODO complete this
+            //n = sendto(fd_tcp)
 
 
         }
@@ -265,9 +262,9 @@ void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
 int main(int argc, char * argv[]) {
     char buffer[1024];
 
-    int fd_udp;
+    int fd_udp, fd_tcp;
 //    socklen_t addrlen;
-    struct addrinfo hints_udp, *res_udp;
+    struct addrinfo hints_udp, *res_udp, hints_tcp, *res_tcp;
 //   struct sockaddr_in addr;
 //   char sockBuffer[128];
 
@@ -277,7 +274,7 @@ int main(int argc, char * argv[]) {
 
 
     fd_udp = create_UDP(hostname, hints_udp, &res_udp);
-
+    fd_tcp = create_TCP(hostname, hints_tcp, &res_tcp);
 
     printf("=== Welcome to RC Forum! ===\n\n>>> ");
     receive_input(buffer, fd_udp, res_udp);
