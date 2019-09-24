@@ -199,7 +199,8 @@ void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
                 }
 
                 n = recvfrom(fd_udp, answer, 1024, 0, res_udp->ai_addr, &res_udp->ai_addrlen);
-                printf("%s\n", answer);
+                if (n == -1) 
+                    exit(ERROR);
 
                 free(message);
                 free(propose_topic);

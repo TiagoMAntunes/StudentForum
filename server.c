@@ -158,83 +158,73 @@ int main(int argc, char *argv[])
             int n = recvfrom(fd_udp, buffer, 1024, 0, (struct sockaddr *) &user_addr, &user_addrlen);
             if (n == -1)
                 exit(ERROR);
-            pid = fork();
-            if (pid < 0) {
-                    printf("Unable to fork");
-			        exit(ERROR);
-            }
-            else if (pid == 0){ //Child process
-                char * token;
-                printf("Message received: %s\n", buffer);
+            char * token;
+            printf("Message received: %s\n", buffer);
 
-                token = strtok(buffer, " \n");
+            token = strtok(buffer, " \n");
 
-                if (strcmp(token, "REG") == 0) {
-                    // TODO validate user number
-                    // printf("Trying to send info to %d %p %d\n", fd_udp, &user_addr, user_addrlen);
-                    // TODO add user
-                    n = sendto(fd_udp, "RGR OK\n", 7, 0, (struct sockaddr *) &user_addr, user_addrlen);
+            if (strcmp(token, "REG") == 0) {
+                // TODO validate user number
+                // printf("Trying to send info to %d %p %d\n", fd_udp, &user_addr, user_addrlen);
+                // TODO add user
+                n = sendto(fd_udp, "RGR OK\n", 7, 0, (struct sockaddr *) &user_addr, user_addrlen);
 
-                } else if (strcmp(token, "LTP") == 0) {
+            } else if (strcmp(token, "LTP") == 0) {
 
 
-                    n = sendto(fd_udp, "LTR 3 (topic:userID)\n", 21, 0, (struct sockaddr *) &user_addr, user_addrlen);
+                n = sendto(fd_udp, "LTR 3 (topic:userID)\n", 21, 0, (struct sockaddr *) &user_addr, user_addrlen);
 
-                } else if (strcmp(token, "PTP") == 0) {
-                    token = strtok(NULL, " ");
-                    char *stringID = strdup(token);
-                    token = strtok(NULL, " ");
-                    char *topic_title = strdup(token);
-                    token = strtok(NULL, " ");
+            } else if (strcmp(token, "PTP") == 0) {
+                token = strtok(NULL, " ");
+                char *stringID = strdup(token);
+                token = strtok(NULL, " ");
+                char *topic_title = strdup(token);
+                token = strtok(NULL, " ");
 
-                    if (n_topics == MAX_TOPICS) {
-                        n = sendto(fd_udp, "PTR FUL", 8, 0, (struct sockaddr *) &user_addr, user_addrlen);
-                        if (n == -1)
-                            exit(ERROR);
-                    }
-
-                    else if (token != NULL || !registered_user(users, atoi(stringID)) || strlen(topic_title) > 10) {
-                        n = sendto(fd_udp, "PTR NOK", 8, 0, (struct sockaddr *) &user_addr, user_addrlen);
-                        if (n == -1)
-                            exit(ERROR);
-                    }
-
-                    else if (topic_exists(topics, topic_title)) {
-                        n = sendto(fd_udp, "PTR DUP", 8, 0, (struct sockaddr *) &user_addr, user_addrlen);
-                        if (n == -1)
-                            exit(ERROR);
-                    }
-
-                    else {
-                        Topic* new = createTopic(topic_title, atoi(stringID));
-                        insertInTable(topics, new, hash(topic_title));
-                        n_topics++;
-
-                        n = sendto(fd_udp, "PTR OK", 7, 0, (struct sockaddr *) &user_addr, user_addrlen);
-                        if (n == -1)
-                            exit(ERROR);
-                    }
-
-                    free(stringID);
-                    free(topic_title);
-
-
-
-                    n = sendto(fd_udp, "PTR OK", 7, 0, (struct sockaddr *) &user_addr, user_addrlen);
-                } else if (strcmp(token, "LQU") == 0) {
-
-
-                    n = sendto(fd_udp, "LQR 5 (question:userID:NA )\n", 28, 0, (struct sockaddr *) &user_addr, user_addrlen);
+                if (n_topics == MAX_TOPICS) {
+                    n = sendto(fd_udp, "PTR FUL", 8, 0, (struct sockaddr *) &user_addr, user_addrlen);
+                    if (n == -1)
+                        exit(ERROR);
                 }
 
-                printf("n:%d errno:%d\n", n, errno);
-                if (n == -1)
+                else if (token != NULL || !registered_user(users, atoi(stringID)) || strlen(topic_title) > 10) {
+                    n = sendto(fd_udp, "PTR NOK", 8, 0, (struct sockaddr *) &user_addr, user_addrlen);
+                    if (n == -1)
                         exit(ERROR);
-                exit(0); //child terminated its job
+                }
+
+                else if (topic_exists(topics, topic_title)) {
+                    n = sendto(fd_udp, "PTR DUP", 8, 0, (struct sockaddr *) &user_addr, user_addrlen);
+                    printf("Returned duplication information\n");
+                    if (n == -1)
+                        exit(ERROR);
+                }
+
+                else {
+                    Topic* new = createTopic(topic_title, atoi(stringID));
+                    insertInTable(topics, new, hash(topic_title));
+                    n_topics++;
+
+                    n = sendto(fd_udp, "PTR OK", 7, 0, (struct sockaddr *) &user_addr, user_addrlen);
+                    printf("Returned OK information\n");
+                    if (n == -1)
+                        exit(ERROR);
+                }
+
+                free(stringID);
+                free(topic_title);
+                
+            } else if (strcmp(token, "LQU") == 0) {
+
+
+                n = sendto(fd_udp, "LQR 5 (question:userID:NA )\n", 28, 0, (struct sockaddr *) &user_addr, user_addrlen);
             }
-            else { //parent process
-                memset(buffer,0, 1024);
-            }
+
+            printf("n:%d errno:%d\n", n, errno);
+            if (n == -1)
+                    exit(ERROR);
+            memset(buffer,0, 1024);
+            
         }
     }
 }
