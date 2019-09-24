@@ -16,6 +16,8 @@
 
 #define ERROR       1
 #define MAX_TOPICS  10
+#define MAX_REQ_LEN 1024 //TODO find out if there is an actual maximum request length
+                        //otherwise change read_TCP to use dynamic allocation
 
 #define max(x, y) (x > y ? x : y)
 
@@ -95,6 +97,27 @@ int topic_exists(Hash* topics, char* topic_title) {
     return 0;
 }
 
+void read_TCP(int fd, char* full_msg){
+    char buffer[MAX_REQ_LEN], c;
+    int i = 0, n;
+
+    n = read(fd, buffer, MAX_REQ_LEN);
+
+    c = buffer[i++];
+    while(c != '\n'){
+        full_msg[i] = c;
+        i++;
+
+        if(i==n){//short read, didnt receive full msg
+            n = read(fd, buffer, MAX_REQ_LEN);
+            i = 0;
+            c = buffer[i++];
+        }
+    }
+    
+    return;
+}
+
 int main(int argc, char *argv[])
 {
     int fd_tcp, fd_udp, newfd, pid;
@@ -146,6 +169,9 @@ int main(int argc, char *argv[])
                 else if (pid == 0){ //Child process
                     printf("dei fork\n");
                     write(newfd, "Oi babyyy\n", 11);
+                    
+                    char* message;
+                    read_TCP(newfd, message);
                 }
                 else { //parent process
                     close(newfd);
