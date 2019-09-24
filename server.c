@@ -53,7 +53,7 @@ int create_TCP(char* hostname, struct addrinfo hints, struct addrinfo *res) {
 
 int create_UDP(char* hostname, struct addrinfo hints, struct addrinfo **res) {
     int n, fd;
-    
+
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_DGRAM;
@@ -76,11 +76,11 @@ int create_UDP(char* hostname, struct addrinfo hints, struct addrinfo **res) {
 
 int registered_user(Hash *users, int userID) {
     // TODO verificar se o user esta registado
-    
+
     return 1;
 }
 
-int topic_exists(Hash* topics, char* topic_title) { 
+int topic_exists(Hash* topics, char* topic_title) {
     List *head = findInTable(topics, hash(topic_title));
     Iterator *it = createIterator(head);
     printf("Hash value: %lu\n", hash(topic_title));
@@ -98,13 +98,13 @@ int topic_exists(Hash* topics, char* topic_title) {
 int main(int argc, char *argv[])
 {
     int fd_tcp, fd_udp, newfd, pid;
-    socklen_t addrlen;
+    socklen_t user_addrlen;
     struct addrinfo hints_tcp, hints_udp, *res_tcp, *res_udp;
-    struct sockaddr_in addr;
+    struct sockaddr_in user_addr;
     fd_set set;
     Hash *topics = createTable(1024, sizeof(List));
     Hash *users = createTable(1024, sizeof(List));
-    int n_topics = 0; 
+    int n_topics = 0;
 
 
     char hostname[1024], buffer[1024];
@@ -134,9 +134,9 @@ int main(int argc, char *argv[])
 
         if (FD_ISSET(fd_tcp, &set)) {
             printf("Receiving from TCP client.\n");
-            if ((newfd = accept(fd_tcp, (struct sockaddr *)&addr, &addrlen)) == -1) 
-                exit(ERROR);  
-            
+            if ((newfd = accept(fd_tcp, (struct sockaddr *)&user_addr, &user_addrlen)) == -1)
+                exit(ERROR);
+
             else {
                 pid = fork();
                 if (pid < 0) {
@@ -154,8 +154,9 @@ int main(int argc, char *argv[])
         }
         if (FD_ISSET(fd_udp, &set)) {
             printf("Receiving from UDP client.\n");
-            int n = recvfrom(fd_udp, buffer, 1024, 0, (struct sockaddr *) &addr, &addrlen);
-            if (n == -1) 
+            user_addrlen = sizeof(user_addr);
+            int n = recvfrom(fd_udp, buffer, 1024, 0, (struct sockaddr *) &user_addr, &user_addrlen);
+            if (n == -1)
                 exit(ERROR);
             pid = fork();
             if (pid < 0) {
@@ -170,15 +171,15 @@ int main(int argc, char *argv[])
 
                 if (strcmp(token, "REG") == 0) {
                     // TODO validate user number
-                    //printf("Trying to send info to %d %p %d\n", fd_udp, &addr, addrlen);
-                    //TODO add user  
-                    n = sendto(fd_udp, "RGR OK\n", 7, 0, (struct sockaddr *) &addr, addrlen);
+                    // printf("Trying to send info to %d %p %d\n", fd_udp, &user_addr, user_addrlen);
+                    // TODO add user
+                    n = sendto(fd_udp, "RGR OK\n", 7, 0, (struct sockaddr *) &user_addr, user_addrlen);
 
                 } else if (strcmp(token, "LTP") == 0) {
-                    
 
-                    n = sendto(fd_udp, "LTR 3 (topic:userID)\n", 21, 0, (struct sockaddr *) &addr, addrlen);
-               
+
+                    n = sendto(fd_udp, "LTR 3 (topic:userID)\n", 21, 0, (struct sockaddr *) &user_addr, user_addrlen);
+
                 } else if (strcmp(token, "PTP") == 0) {
                     token = strtok(NULL, " ");
                     char *stringID = strdup(token);
@@ -187,54 +188,53 @@ int main(int argc, char *argv[])
                     token = strtok(NULL, " ");
 
                     if (n_topics == MAX_TOPICS) {
-                        n = sendto(fd_udp, "PTR FUL", 8, 0, (struct sockaddr *) &addr, addrlen);
-                        if (n == -1) 
+                        n = sendto(fd_udp, "PTR FUL", 8, 0, (struct sockaddr *) &user_addr, user_addrlen);
+                        if (n == -1)
                             exit(ERROR);
                     }
 
                     else if (token != NULL || !registered_user(users, atoi(stringID)) || strlen(topic_title) > 10) {
-                        n = sendto(fd_udp, "PTR NOK", 8, 0, (struct sockaddr *) &addr, addrlen);
-                        if (n == -1) 
+                        n = sendto(fd_udp, "PTR NOK", 8, 0, (struct sockaddr *) &user_addr, user_addrlen);
+                        if (n == -1)
                             exit(ERROR);
                     }
 
                     else if (topic_exists(topics, topic_title)) {
-                        n = sendto(fd_udp, "PTR DUP", 8, 0, (struct sockaddr *) &addr, addrlen);
-                        if (n == -1) 
-                            exit(ERROR);  
+                        n = sendto(fd_udp, "PTR DUP", 8, 0, (struct sockaddr *) &user_addr, user_addrlen);
+                        if (n == -1)
+                            exit(ERROR);
                     }
 
                     else {
                         Topic* new = createTopic(topic_title, atoi(stringID));
-                        insertInTable(topics, new, hash(topic_title)); 
-                        n_topics++;                       
+                        insertInTable(topics, new, hash(topic_title));
+                        n_topics++;
 
-                        n = sendto(fd_udp, "PTR OK", 7, 0, (struct sockaddr *) &addr, addrlen);
-                        if (n == -1) 
-                            exit(ERROR); 
+                        n = sendto(fd_udp, "PTR OK", 7, 0, (struct sockaddr *) &user_addr, user_addrlen);
+                        if (n == -1)
+                            exit(ERROR);
                     }
 
                     free(stringID);
                     free(topic_title);
-                    
 
 
-                    n = sendto(fd_udp, "PTR OK", 7, 0, (struct sockaddr *) &addr, addrlen);
+
+                    n = sendto(fd_udp, "PTR OK", 7, 0, (struct sockaddr *) &user_addr, user_addrlen);
                 } else if (strcmp(token, "LQU") == 0) {
-  
 
-                    n = sendto(fd_udp, "LQR 5 (question:userID:NA )\n", 28, 0, (struct sockaddr *) &addr, addrlen);
+
+                    n = sendto(fd_udp, "LQR 5 (question:userID:NA )\n", 28, 0, (struct sockaddr *) &user_addr, user_addrlen);
                 }
-                
+
                 printf("n:%d errno:%d\n", n, errno);
-                if (n == -1) 
+                if (n == -1)
                         exit(ERROR);
-                exit(0); //child terminated its job   
+                exit(0); //child terminated its job
             }
             else { //parent process
                 memset(buffer,0, 1024);
             }
-        }		
+        }
     }
 }
-
