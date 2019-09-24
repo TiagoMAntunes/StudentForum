@@ -13,6 +13,7 @@
 #define ERROR   1
 #define TRUE    1
 #define FALSE   0
+#define MAX_REQ_LEN 1024
 
 int topic_number = -1, question_number = -1;
 int n_topics = 500;     // TODO ir atualizando
@@ -112,6 +113,44 @@ int select_topic(char *temp_topic, int short_cmmd) {
         }
     }
     return 0;
+}
+
+void read_TCP(int fd, char* full_msg){
+    char buffer[MAX_REQ_LEN], c;
+    int n;
+
+    n = read(fd, buffer, MAX_REQ_LEN);
+
+    c = buffer[n-1];
+    while (c != '\n') {
+        n = read(fd, buffer + n, MAX_REQ_LEN - n);
+        c = buffer[n-1];
+    }
+    
+    strcpy(full_msg, buffer);
+
+    return;
+}
+
+void write_TCP(int fd, char* reply, int len){
+    int n, sent = 0;
+    int to_send = len;
+
+    n = write(fd, reply, len);
+    if(n==-1) exit(1);
+
+    sent = n;
+    to_send -= n;
+
+    while(sent<len){
+        n = write(fd, reply + sent, to_send);
+        if(n==-1) exit(1);
+
+        sent += n;
+        to_send -= n;
+    }
+
+    return;
 }
 
 void receive_input(char* buffer, int fd_udp, int fd_tcp, struct addrinfo *res_udp, struct addrinfo *res_tcp) {
@@ -243,8 +282,9 @@ void receive_input(char* buffer, int fd_udp, int fd_tcp, struct addrinfo *res_ud
             n = connect(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
                 if (n == -1) exit(1);
 
-            n = sendto(fd_tcp, message, msg_size, 0, res_tcp->ai_addr, res_tcp->ai_addrlen);
+            //n = sendto(fd_tcp, message, msg_size, 0, res_tcp->ai_addr, res_tcp->ai_addrlen);
 
+            write_TCP(fd_tcp, message, msg_size);
 
         }
 
