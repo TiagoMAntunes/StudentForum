@@ -202,6 +202,8 @@ void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
                 if (n == -1) 
                     exit(ERROR);
 
+                printf("%s\n", answer);
+
                 free(message);
                 free(propose_topic);
             }

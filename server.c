@@ -24,26 +24,23 @@
 char port[6] = "58017";
 
 
-int create_TCP(char* hostname, struct addrinfo hints, struct addrinfo *res) {
+int create_TCP(char* hostname, struct addrinfo hints, struct addrinfo **res) {
     int n, fd;
-
-    //THERE MIGHT BE AN ERROR HERE BECAUSE res WILL NOT SAVE THE VALUE CORRECTLY
-    //SEE create_UDP FUNCTION
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
 
-    n = getaddrinfo(NULL, port, &hints, &res);
+    n = getaddrinfo(NULL, port, &hints, res);
     if (n != 0)
         exit(ERROR);
 
-    fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    fd = socket((*res)->ai_family, (*res)->ai_socktype, (*res)->ai_protocol);
     if (fd == -1)
         exit(ERROR);
 
-    n = bind(fd, res->ai_addr, res->ai_addrlen);
+    n = bind(fd, (*res)->ai_addr, (*res)->ai_addrlen);
     if (n == -1)
         exit(ERROR);
 
@@ -141,7 +138,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    fd_tcp = create_TCP(hostname, hints_tcp, res_tcp);
+    fd_tcp = create_TCP(hostname, hints_tcp, &res_tcp);
     fd_udp = create_UDP(hostname, hints_udp, &res_udp);
 
     //clear descriptor set
@@ -239,7 +236,7 @@ int main(int argc, char *argv[])
 
                 free(stringID);
                 free(topic_title);
-                
+
             } else if (strcmp(token, "LQU") == 0) {
 
 
