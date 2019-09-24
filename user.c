@@ -11,6 +11,8 @@
 
 #define PORT "58017"
 #define ERROR   1
+#define TRUE    1
+#define FALSE   0
 
 int topic_number = -1, question_number = -1;
 int n_topics = 500;     // TODO ir atualizando
@@ -27,7 +29,7 @@ int create_TCP(char* hostname, struct addrinfo hints, struct addrinfo *res) {
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_NUMERICSERV;
 
-    n = getaddrinfo(hostname, PORT, &hints, &res);
+    n = getaddrinfo("zezere.tecnico.ulisboa.pt", PORT, &hints, &res);
     if (n != 0)
         exit(ERROR);
 
@@ -42,7 +44,7 @@ int create_TCP(char* hostname, struct addrinfo hints, struct addrinfo *res) {
 
 int create_UDP(char* hostname, struct addrinfo hints, struct addrinfo **res) {
     int n, fd;
-    
+
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_DGRAM;
@@ -68,12 +70,12 @@ int verify_ID(char *stringID) {
         i++;
     }
 
-    if (i != 5) 
+    if (i != 5)
         return 0;
 
     return 1;
 
-    
+
 }
 
 int topic_exists(char *topic) {
@@ -88,8 +90,8 @@ int select_topic(char *temp_topic, int short_cmmd) {
             if (temp_topic[i] > '9' || temp_topic[i] < 0)
                 return 0;
             i++;
-        }    
-         
+        }
+
         if (atoi(temp_topic) < n_topics) {
             topic_number = atoi(temp_topic);
 
@@ -99,7 +101,7 @@ int select_topic(char *temp_topic, int short_cmmd) {
             // TODO set topic according to its number
             return 1;
         }
-        return 0;     
+        return 0;
     }
     else {
         if (topic_exists(temp_topic)) {
@@ -119,13 +121,14 @@ void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
     char *token, *stringID;
     int n, user_exists, short_cmmd = 0;
     char answer[1024];
+    int tl_available = FALSE;
 
     while (1) {
         bzero(buffer, 1024);
         bzero(answer, 1024);
         fgets(buffer, 1024, stdin);
         token = strtok(buffer, " ");
-        
+
         if (strcmp(token, "reg") == 0 || strcmp(token, "register") == 0) {
             token = strtok(NULL, " ");
             stringID = strdup(token);
@@ -140,18 +143,19 @@ void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
                 if (n == -1) {
                     exit(ERROR);
                 }
-                
+
                 n = recvfrom(fd_udp, answer, 1024, 0, res_udp->ai_addr, &res_udp->ai_addrlen);
                 printf("%s\n", answer);
                 user_exists = 1; //depende da resposta do server
 
                 free(message);
-            } 
-            else 
-                printf("Invalid command.\nregister userID / reg userID (5 digits)\n"); 
+            }
+            else
+                printf("Invalid command.\nregister userID / reg userID (5 digits)\n");
         }
 
         else if (user_exists && (strcmp(token, "topic_list\n") == 0 || strcmp(token, "tl\n") == 0)) {
+            tl_available = TRUE;
             char *message = malloc(sizeof(char) * 5);
             sprintf(message, "LTP\n");
             n = sendto(fd_udp, message, 4, 0, res_udp->ai_addr, res_udp->ai_addrlen);
@@ -166,21 +170,23 @@ void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
         }
 
         else if (user_exists && (strcmp(token, "topic_select") == 0 || strcmp(token, "ts")) == 0) {
-            short_cmmd = strcmp(token, "ts") == 0 ? 1 : 0;
-            token = strtok(NULL, " ");
-            char *temp_topic = strdup(token);
+            if (tl_available) {
+                short_cmmd = strcmp(token, "ts") == 0 ? 1 : 0;
+                token = strtok(NULL, " ");
+                char *temp_topic = strdup(token);
 
-            if (!select_topic(temp_topic, short_cmmd)) {
-                printf("Invalid topic selected.\n");
+                if (!select_topic(temp_topic, short_cmmd)) {
+                    printf("Invalid topic selected.\n");
+                }
+
+                free(temp_topic);
             }
-            
-            free(temp_topic);
+            else
+                printf("Cannot select topic.\nYou must request topic list first.\n");
         }
 
         else if (user_exists && (strcmp(token, "topic_propose") == 0 || strcmp(token, "tp") == 0)) {
             char *propose_topic, *message;
-
-
             token = strtok(NULL, " \n");
             propose_topic = strdup(token);
             token = strtok(NULL, " ");
@@ -198,9 +204,9 @@ void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
                 free(message);
                 free(propose_topic);
             }
-            else 
+            else
                 printf("Invalid command.\ntopic_propose topic / tp topic\n");
-            
+
         }
 
         else if (user_exists && (strcmp(token, "question_list\n") == 0|| strcmp(token, "ql\n")) == 0) {
@@ -208,11 +214,11 @@ void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
             char * message;
             if (topic != NULL) {
                 message = malloc(sizeof(char) * (strlen(topic) + 5));
-                sprintf(message, "LQU %s\n", topic);   
+                sprintf(message, "LQU %s\n", topic);
             }
-            else { 
+            else {
                 message = malloc(sizeof(char) * 17);
-                sprintf(message, "LQU %d\n", topic_number);  
+                sprintf(message, "LQU %d\n", topic_number);
             }
             n = sendto(fd_udp, message, strlen(message), 0, res_udp->ai_addr, res_udp->ai_addrlen);
             if (n == -1) {
@@ -241,7 +247,7 @@ void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
             printf("Goodbye!\n");
             break;
         }
-    
+
         else if (!user_exists) {
             printf("You need to login.\n");
         }
@@ -249,7 +255,7 @@ void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
         //    printf("%s\n", token);
             printf("Unknown command. Try again.\n");
         }
-        printf(">>> "); 
+        printf(">>> ");
     }
 }
 

@@ -33,7 +33,7 @@ int create_TCP(char* hostname, struct addrinfo hints, struct addrinfo *res) {
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
 
-    n = getaddrinfo(hostname, port, &hints, &res);
+    n = getaddrinfo(NULL, port, &hints, &res);
     if (n != 0)
         exit(ERROR);
 
@@ -59,7 +59,7 @@ int create_UDP(char* hostname, struct addrinfo hints, struct addrinfo **res) {
     hints.ai_socktype = SOCK_DGRAM;
     hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
 
-    n = getaddrinfo(hostname, port, &hints, res);
+    n = getaddrinfo(NULL, port, &hints, res);
     if (n != 0)
         exit(ERROR);
 
