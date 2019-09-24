@@ -1,3 +1,4 @@
 *.o
 FS
 user
+.gdb_history
