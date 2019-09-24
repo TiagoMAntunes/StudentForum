@@ -100,18 +100,13 @@ void read_TCP(int fd, char* full_msg){
 
     n = read(fd, buffer, MAX_REQ_LEN);
 
-    c = buffer[i++];
-    while(c != '\n'){
-        full_msg[i] = c;
-        i++;
-
-        if(i==n){//short read, didnt receive full msg
-            n = read(fd, buffer, MAX_REQ_LEN);
-            i = 0;
-            c = buffer[i++];
-        }
+    c = buffer[n-1];
+    while (c != '\n') {
+        n = read(fd, buffer + n, MAX_REQ_LEN - n);
     }
     
+    strcpy(full_msg, buffer);
+
     return;
 }
 
@@ -165,10 +160,11 @@ int main(int argc, char *argv[])
                 }
                 else if (pid == 0){ //Child process
                     printf("dei fork\n");
-                    write(newfd, "Oi babyyy\n", 11);
+                    //write(newfd, "Oi babyyy\n", 11);
                     
-                    char* message;
+                    char message[1024];
                     read_TCP(newfd, message);
+                    printf("Message received: %s", message);
                 }
                 else { //parent process
                     close(newfd);

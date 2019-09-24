@@ -16,7 +16,7 @@
 
 int topic_number = -1, question_number = -1;
 int n_topics = 500;     // TODO ir atualizando
-char *topic = NULL;
+char *topic = "teste";
 char *question = NULL;
 
 int userID;
@@ -114,7 +114,7 @@ int select_topic(char *temp_topic, int short_cmmd) {
     return 0;
 }
 
-void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
+void receive_input(char* buffer, int fd_udp, int fd_tcp, struct addrinfo *res_udp, struct addrinfo *res_tcp) {
     char *token, *stringID;
     int n, user_exists, short_cmmd = 0;
     char answer[1024];
@@ -232,12 +232,18 @@ void receive_input(char* buffer, int fd_udp, struct addrinfo *res_udp) {
         }
 
 // TCP FROM NOW ON
-        else if (user_exists && (strcmp(token, "question_get") == 0 || strcmp(token, "qg") == 0)) {
+        else if (user_exists && topic != NULL && (strcmp(token, "question_get") == 0 || strcmp(token, "qg") == 0)) {
             short_cmmd = strcmp(token, "qg") == 0 ? 1 : 0;
             token = strtok(NULL, " ");
-            char *temp_question = strdup(token);
+            
+            int msg_size = strlen(token) + strlen(topic) + 5;
+            char * message = malloc(sizeof(char) * (msg_size+1));
+            sprintf(message, "GQU %s %s", topic, token);
+            
+            n = connect(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
+                if (n == -1) exit(1);
 
-            //n = sendto(fd_tcp)
+            n = sendto(fd_tcp, message, msg_size, 0, res_tcp->ai_addr, res_tcp->ai_addrlen);
 
 
         }
@@ -277,7 +283,7 @@ int main(int argc, char * argv[]) {
     fd_tcp = create_TCP(hostname, hints_tcp, &res_tcp);
 
     printf("=== Welcome to RC Forum! ===\n\n>>> ");
-    receive_input(buffer, fd_udp, res_udp);
+    receive_input(buffer, fd_udp, fd_tcp, res_udp, res_tcp);
 
     freeaddrinfo(res_udp);
     close(fd_udp);
