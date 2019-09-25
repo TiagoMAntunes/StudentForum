@@ -285,6 +285,7 @@ void receive_input(char* buffer, int fd_udp, int fd_tcp, struct addrinfo *res_ud
                     printf("Invalid topic selected.\n");
                 }
 
+                printf("Current topic: %s\n", topic);
                 free(temp_topic);
             }
             else
@@ -354,11 +355,35 @@ void receive_input(char* buffer, int fd_udp, int fd_tcp, struct addrinfo *res_ud
             sprintf(message, "GQU %s %s", topic, token);
             
             n = connect(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
-                if (n == -1) exit(1);
+            if (n == -1) exit(1);
 
             //n = sendto(fd_tcp, message, msg_size, 0, res_tcp->ai_addr, res_tcp->ai_addrlen);
 
             write_TCP(fd_tcp, message, msg_size);
+
+        }
+
+        else if (strcmp(token, "question_submit") == 0 || strcmp(token, "qs") == 0) {
+            char * question, * text_file, * image_file = NULL, * message;
+            int msg_size;
+            char qIMG; //flag
+            token = strtok(NULL, " ");
+            question = strdup(token);
+            token = strtok(NULL, " ");
+            text_file = strdup(token);
+            token = strtok(NULL, " ");
+            if ((qIMG = token != NULL))
+                image_file = strdup(token);
+
+            msg_size = 15 + strlen(topic) + strlen(question) /* + size of txt file in bytes  + txt file data*/ + qIMG;
+            
+            message = malloc(sizeof(char) * msg_size);
+            sprintf(message, "QUS %d %s %s %d\n", userID, topic, question, /* qsize, qdata, */ qIMG );
+            printf("Message: %sSize: %d %d\n", message, strlen(message), msg_size);
+            n = connect(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
+            if (n == -1) exit(1);
+
+            write_TCP(fd_tcp, message, msg_size - 1);
 
         }
 
