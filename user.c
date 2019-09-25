@@ -28,8 +28,9 @@ char *question = NULL;
 
 int userID;
 
-int create_TCP(char* hostname, struct addrinfo hints, struct addrinfo **res) {
+int create_TCP(char* hostname, struct addrinfo **res) {
     int n, fd;
+    struct addrinfo hints;
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
@@ -215,13 +216,14 @@ void send_ERR_MSG_UDP(int fd, struct addrinfo **res) {
     } 
 }
 
-void receive_input(char* buffer, int fd_udp, int fd_tcp, struct addrinfo *res_udp, struct addrinfo *res_tcp) {
+void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *res_udp) {
     char *token, *stringID;
     int n, user_exists, short_cmmd = 0;
     char answer[1024];
     int tl_available = FALSE;
 
-
+    int fd_tcp; 
+    struct addrinfo *res_tcp;
     while (1) {
         bzero(buffer, 1024);
         bzero(answer, 1024);
@@ -353,14 +355,14 @@ void receive_input(char* buffer, int fd_udp, int fd_tcp, struct addrinfo *res_ud
             int msg_size = strlen(token) + strlen(topic) + 5;
             char * message = malloc(sizeof(char) * (msg_size+1));
             sprintf(message, "GQU %s %s", topic, token);
-            
+            fd_tcp = create_TCP(hostname,  &res_tcp);
             n = connect(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
             if (n == -1) exit(1);
 
             //n = sendto(fd_tcp, message, msg_size, 0, res_tcp->ai_addr, res_tcp->ai_addrlen);
 
             write_TCP(fd_tcp, message);
-
+            close(fd_tcp);
         }
 
         else if (strcmp(token, "question_submit") == 0 || strcmp(token, "qs") == 0) {
@@ -380,10 +382,13 @@ void receive_input(char* buffer, int fd_udp, int fd_tcp, struct addrinfo *res_ud
             message = malloc(sizeof(char) * msg_size);
             sprintf(message, "QUS %d %s %s %d\n", userID, topic, question, /* qsize, qdata, */ qIMG );
             printf("Message: %sSize: %d %d\n", message, strlen(message), msg_size);
+            
+            fd_tcp = create_TCP(hostname,  &res_tcp);
             n = connect(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
             if (n == -1) exit(1);
 
             write_TCP(fd_tcp, message);
+            close(fd_tcp);
 
         }
 
@@ -401,11 +406,14 @@ void receive_input(char* buffer, int fd_udp, int fd_tcp, struct addrinfo *res_ud
             
             message = malloc(sizeof(char) * msg_size);
             sprintf(message, "ANS %d %s %d\n", userID, topic, /* qsize, qdata, */ qIMG );
+            
+            fd_tcp = create_TCP(hostname,  &res_tcp);
             n = connect(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
             if (n == -1) exit(1);
 
             write_TCP(fd_tcp, message);
             printf("Enviado!\n");
+            close(fd_tcp);
         }
 
         else if (strcmp(token, "exit\n") == 0) {
@@ -427,8 +435,8 @@ void receive_input(char* buffer, int fd_udp, int fd_tcp, struct addrinfo *res_ud
 int main(int argc, char * argv[]) {
     char buffer[1024];
 
-    int fd_udp, fd_tcp;
-    struct addrinfo hints_udp, *res_udp, hints_tcp, *res_tcp;
+    int fd_udp;
+    struct addrinfo hints_udp, *res_udp;
 
     char hostname[1024];
     hostname[1023] = '\0';
@@ -436,10 +444,10 @@ int main(int argc, char * argv[]) {
 
 
     fd_udp = create_UDP(hostname, hints_udp, &res_udp);
-    fd_tcp = create_TCP(hostname, hints_tcp, &res_tcp);
+    
 
     printf("=== Welcome to RC Forum! ===\n\n>>> ");
-    receive_input(buffer, fd_udp, fd_tcp, res_udp, res_tcp);
+    receive_input(hostname, buffer, fd_udp, res_udp);
 
     freeaddrinfo(res_udp);
     close(fd_udp);
