@@ -217,6 +217,7 @@ int main(int argc, char *argv[])
 
                     read_TCP(newfd, message);
                     printf("Message received: %s", message);
+                    exit(0);
 
                 }
                 else { //parent process
