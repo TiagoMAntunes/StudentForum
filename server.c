@@ -78,12 +78,9 @@ int registered_user(Hash *users, int userID) {
     return 1;
 }
 
-int topic_exists(Hash* topics, char* topic_title) {
-    List *head = findInTable(topics, hash(topic_title));
-    Iterator *it = createIterator(head);
-    printf("Hash value: %lu\n", hash(topic_title));
+int topic_exists(List* topics, char* topic_title) {
+    Iterator *it = createIterator(topics);
     while (hasNext(it)) {
-        printf("in while\n");
         if (strcmp(getTopicTitle(current(next(it))), topic_title) == 0) {
             killIterator(it);
             return 1;
@@ -91,6 +88,38 @@ int topic_exists(Hash* topics, char* topic_title) {
     }
     killIterator(it);
     return 0;
+}
+
+char *list_topics(List* topics, int n_topics, int *str_size) {
+    char *list = (char*) malloc(sizeof(char) * 10 * n_topics);
+    Iterator *it = createIterator(topics);
+
+
+    int t = 0;
+    while (hasNext(it)){
+        List* next_topic = next(it);
+        char* title = getTopicTitle(current(next_topic));
+        int len = strlen(title);
+
+        for (int i = 0; i < len; i++) { 
+            if (title[i] != '\0')        
+                list[t++] = title[i];
+        }
+        list[t++] = ':';
+
+        char stringID[5];
+        sprintf(stringID, "%d", getTopicID(current(next_topic)));
+        for (int i = 0; i < 5; i++) {
+            list[t++] = stringID[i];
+        }
+        if (hasNext(it)) {
+            list[t++] = ' ';
+        }
+    }
+    *str_size = t;
+    killIterator(it);
+    return list;
+
 }
 
 void read_TCP(int fd, char* full_msg){
@@ -138,7 +167,7 @@ int main(int argc, char *argv[])
     struct addrinfo hints_tcp, hints_udp, *res_tcp, *res_udp;
     struct sockaddr_in user_addr;
     fd_set set;
-    Hash *topics = createTable(1024, sizeof(List));
+    List *topics = newList();
     Hash *users = createTable(1024, sizeof(List));
     int n_topics = 0;
 
@@ -208,21 +237,27 @@ int main(int argc, char *argv[])
 
             if (strcmp(token, "REG") == 0) {
                 // TODO validate user number
-                // printf("Trying to send info to %d %p %d\n", fd_udp, &user_addr, user_addrlen);
                 // TODO add user
                 n = sendto(fd_udp, "RGR OK\n", 7, 0, (struct sockaddr *) &user_addr, user_addrlen);
 
             } else if (strcmp(token, "LTP") == 0) {
+                int list_size;
+                char *list = list_topics(topics, n_topics, &list_size);
+                char *message = malloc(sizeof(char) * 6 + list_size);
+                sprintf(message, "LTR %d %s\n", n_topics, list);
 
+                n = sendto(fd_udp, message, strlen(message), 0, (struct sockaddr *) &user_addr, user_addrlen);
 
-                n = sendto(fd_udp, "LTR 3 (topic:userID)\n", 21, 0, (struct sockaddr *) &user_addr, user_addrlen);
+                free(list);
+                free(message);
 
             } else if (strcmp(token, "PTP") == 0) {
+
                 token = strtok(NULL, " ");
                 char *stringID = strdup(token);
-                token = strtok(NULL, " ");
+                token = strtok(NULL, " \n");
                 char *topic_title = strdup(token);
-                token = strtok(NULL, " ");
+                token = strtok(NULL, " \n");
 
                 if (n_topics == MAX_TOPICS) {
                     n = sendto(fd_udp, "PTR FUL", 8, 0, (struct sockaddr *) &user_addr, user_addrlen);
@@ -245,7 +280,7 @@ int main(int argc, char *argv[])
 
                 else {
                     Topic* new = createTopic(topic_title, atoi(stringID));
-                    insertInTable(topics, new, hash(topic_title));
+                    addEl(topics, new);
                     n_topics++;
 
                     n = sendto(fd_udp, "PTR OK", 7, 0, (struct sockaddr *) &user_addr, user_addrlen);
@@ -257,6 +292,7 @@ int main(int argc, char *argv[])
                 free(stringID);
                 free(topic_title);
 
+            
             } else if (strcmp(token, "LQU") == 0) {
 
 
@@ -265,8 +301,9 @@ int main(int argc, char *argv[])
 
             printf("n:%d errno:%d\n", n, errno);
             if (n == -1)
-                    exit(ERROR);
-            memset(buffer,0, 1024);
+                exit(ERROR);
+
+            bzero(buffer, 1024);
             
         }
     }

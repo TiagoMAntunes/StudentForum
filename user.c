@@ -8,17 +8,23 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include "list.h"
+#include "topic.h"
+#include "iterator.h"
 
-#define PORT "58017"
-#define ERROR   1
-#define TRUE    1
-#define FALSE   0
+#define PORT        "58017"
+#define ERROR       1
+#define TRUE        1
+#define FALSE       0
 #define MAX_REQ_LEN 1024
+#define ERR_MSG     "ERR"
+#define ERR_LEN     4
 
 int topic_number = -1, question_number = -1;
 int n_topics = 500;     // TODO ir atualizando
 char *topic = "teste";
 char *question = NULL;
+
 
 int userID;
 
@@ -115,6 +121,54 @@ int select_topic(char *temp_topic, int short_cmmd) {
     return 0;
 }
 
+int receive_RGR(char* answer) {
+    char *token;
+
+    token = strtok(answer, " ");
+    if (strcmp(token, "RGR") != 0) 
+        return 0;
+
+    else {
+        token = strtok(NULL, " \n");
+        if (strcmp(token, "OK") == 0) {
+            printf("Successfully registered.\n");
+        }
+        else if (strcmp(token, "NOK") == 0) {
+            printf("Register not successful\n");
+        }
+        else // wrong protocol
+            return 0;     
+    }
+    return 1;
+}
+
+int receive_PTR(char* answer) {
+    char *token;
+
+    token = strtok(answer, " ");
+    if (strcmp(token, "PTR") != 0) 
+        return 0;
+
+    else {
+        token = strtok(NULL, " \n");
+        if (strcmp(token, "OK") == 0) {
+            printf("Topic successfully proposed.\n");
+        }
+        else if (strcmp(token, "DUP") == 0) {
+            printf("Topic already exists.\n");
+        }
+        else if (strcmp(token, "FUL") == 0) {
+            printf("Topic list is full.\n");
+        }
+        else if (strcmp(token, "NOK") == 0){
+            printf("Invalid request.\n");
+        }
+        else // wrong protocol
+            return 0;
+    }
+    return 1;
+}
+
 void read_TCP(int fd, char* full_msg){
     char buffer[MAX_REQ_LEN], c;
     int n;
@@ -153,11 +207,20 @@ void write_TCP(int fd, char* reply, int len){
     return;
 }
 
+void send_ERR_MSG_UDP(int fd, struct addrinfo **res) {
+    int n;
+    n = sendto(fd, ERR_MSG, ERR_LEN, 0, (*res)->ai_addr, (*res)->ai_addrlen);
+    if (n == -1) {
+        exit(ERROR);
+    } 
+}
+
 void receive_input(char* buffer, int fd_udp, int fd_tcp, struct addrinfo *res_udp, struct addrinfo *res_tcp) {
     char *token, *stringID;
     int n, user_exists, short_cmmd = 0;
     char answer[1024];
     int tl_available = FALSE;
+
 
     while (1) {
         bzero(buffer, 1024);
@@ -181,8 +244,12 @@ void receive_input(char* buffer, int fd_udp, int fd_tcp, struct addrinfo *res_ud
                 }
 
                 n = recvfrom(fd_udp, answer, 1024, 0, res_udp->ai_addr, &res_udp->ai_addrlen);
-                printf("%s\n", answer);
+                printf("%s", answer);
                 user_exists = 1; //depende da resposta do server
+
+                if (!receive_RGR(answer)) {
+                    send_ERR_MSG_UDP(fd_udp, &res_udp);
+                }
 
                 free(message);
             }
@@ -203,6 +270,9 @@ void receive_input(char* buffer, int fd_udp, int fd_tcp, struct addrinfo *res_ud
             // TODO receive list of topics
             n = recvfrom(fd_udp, answer, 1024, 0, res_udp->ai_addr, &res_udp->ai_addrlen);
             printf("%s\n", answer);
+
+            // TODO validar protocolo de LTR
+            free(message);
         }
 
         else if (user_exists && (strcmp(token, "topic_select") == 0 || strcmp(token, "ts")) == 0) {
@@ -239,6 +309,9 @@ void receive_input(char* buffer, int fd_udp, int fd_tcp, struct addrinfo *res_ud
                     exit(ERROR);
 
                 printf("%s\n", answer);
+                if (!receive_PTR(answer)) {
+                    send_ERR_MSG_UDP(fd_udp, &res_udp);
+                }
 
                 free(message);
                 free(propose_topic);
@@ -288,7 +361,6 @@ void receive_input(char* buffer, int fd_udp, int fd_tcp, struct addrinfo *res_ud
 
         }
 
-
         else if (strcmp(token, "exit\n") == 0) {
             printf("Goodbye!\n");
             break;
@@ -309,10 +381,7 @@ int main(int argc, char * argv[]) {
     char buffer[1024];
 
     int fd_udp, fd_tcp;
-//    socklen_t addrlen;
     struct addrinfo hints_udp, *res_udp, hints_tcp, *res_tcp;
-//   struct sockaddr_in addr;
-//   char sockBuffer[128];
 
     char hostname[1024];
     hostname[1023] = '\0';
