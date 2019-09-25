@@ -349,19 +349,30 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
 // TCP FROM NOW ON
         else if (user_exists && topic != NULL && (strcmp(token, "question_get") == 0 || strcmp(token, "qg") == 0)) {
+            char question_title[11];
             short_cmmd = strcmp(token, "qg") == 0 ? 1 : 0;
             token = strtok(NULL, " ");
+
+            if(short_cmmd){
+                //TODO get question title from question list, by number
+            }
+
+            else
+                strcpy(question_title, token);
             
-            int msg_size = strlen(token) + strlen(topic) + 5;
+            int msg_size = strlen(question_title) + strlen(topic) + 5;
             char * message = malloc(sizeof(char) * (msg_size+1));
-            sprintf(message, "GQU %s %s", topic, token);
+            sprintf(message, "GQU %s %s", topic, question_title);
             fd_tcp = create_TCP(hostname,  &res_tcp);
             n = connect(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
             if (n == -1) exit(1);
 
             //n = sendto(fd_tcp, message, msg_size, 0, res_tcp->ai_addr, res_tcp->ai_addrlen);
 
+
             write_TCP(fd_tcp, message);
+
+            //TODO if reply is not 'QGR EOF' or 'QGR ERR', save question_title as currently selected question
             close(fd_tcp);
         }
 
