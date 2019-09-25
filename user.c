@@ -216,6 +216,61 @@ void send_ERR_MSG_UDP(int fd, struct addrinfo **res) {
     } 
 }
 
+void get_txtfile(char* filename, char* txt, int length){
+    FILE* f;
+    char *buffer;
+    int i = 0;
+
+    f = fopen(filename, "r");
+
+    if(f!=NULL){
+        buffer = (char*) malloc (sizeof(char) * length + 1);
+
+        while(i<length){//usei isto pq tava a dar merda mas podem mudar
+            buffer[i] = fgetc(f);
+            i++;
+        }
+
+        buffer[i] = '\0';
+
+        strcpy(txt, buffer);
+
+        fclose (f);
+    }
+    return;
+}
+
+int get_filesize(char* filename){
+    FILE* f;
+    int length;
+
+    f = fopen(filename, "r");
+
+    if(f!=NULL){
+        fseek(f, 0, SEEK_END);
+        length = ftell(f);
+
+        fseek(f, 0, SEEK_SET);
+
+        fclose (f);
+    }
+
+    return length;
+
+}
+
+int ndigits(int i){
+    int count;
+
+    while(i != 0)
+    {
+        i /= 10;
+        ++count;
+    }
+
+    return count;
+}
+
 void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *res_udp) {
     char *token, *stringID;
     int n, user_exists, short_cmmd = 0;
@@ -378,20 +433,35 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
         else if (strcmp(token, "question_submit") == 0 || strcmp(token, "qs") == 0) {
             char * question, * text_file, * image_file = NULL, * message;
-            int msg_size;
+            char *qdata, ext_txt[5] = ".txt";
+            int msg_size, qsize, i;
             char qIMG; //flag
             token = strtok(NULL, " ");
             question = strdup(token);
             token = strtok(NULL, " ");
-            text_file = strdup(token);
+            text_file = malloc(sizeof(char) * strlen(token) + 5);
+            strcpy(text_file, token);
             token = strtok(NULL, " ");
+
             if ((qIMG = token != NULL))
                 image_file = strdup(token);
 
-            msg_size = 15 + strlen(topic) + strlen(question) /* + size of txt file in bytes  + txt file data*/ + qIMG;
+            else{//tirar o \n
+                i = strlen(text_file) - 1;
+                text_file[i] = '\0';
+            }
+
+            strcat(text_file, ext_txt);
+
+            qsize = get_filesize(text_file);
+            qdata = (char*) malloc (sizeof(char) * qsize + 1);
+            
+            get_txtfile(text_file, qdata, qsize);
+
+            msg_size = 15 + strlen(topic) + strlen(question) + ndigits(qsize) + qsize + qIMG;
             
             message = malloc(sizeof(char) * msg_size);
-            sprintf(message, "QUS %d %s %s %d\n", userID, topic, question, /* qsize, qdata, */ qIMG );
+            sprintf(message, "QUS %d %s %s %d %s\n", userID, topic, question, qsize, qdata /*qIMG*/ );
             printf("Message: %sSize: %d %d\n", message, strlen(message), msg_size);
             
             fd_tcp = create_TCP(hostname,  &res_tcp);
