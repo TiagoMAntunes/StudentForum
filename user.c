@@ -272,7 +272,7 @@ void receive_input(char* buffer, int fd_udp, int fd_tcp, struct addrinfo *res_ud
             printf("%s\n", answer);
 
             // TODO validar protocolo de LTR
-            free(message);
+            
         }
 
         else if (user_exists && (strcmp(token, "topic_select") == 0 || strcmp(token, "ts")) == 0) {
@@ -299,6 +299,7 @@ void receive_input(char* buffer, int fd_udp, int fd_tcp, struct addrinfo *res_ud
             if (token == NULL) {
                 message = malloc(sizeof(char) * (strlen(propose_topic) + 12));
                 sprintf(message, "PTP %d %s\n", userID, propose_topic);
+                printf("%s", message);
                 n = sendto(fd_udp, message, strlen(message), 0, res_udp->ai_addr, res_udp->ai_addrlen);
                 if (n == -1) {
                     exit(ERROR);
