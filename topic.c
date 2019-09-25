@@ -14,6 +14,10 @@ char* getTopicTitle(Topic* topic) {
     return topic->title;
 }
 
+int getTopicID(Topic* topic) {
+    return topic->userID;
+}
+
 void addQuestion(Topic *topic, char* question, unsigned long id) {
     insertInTable(topic->questions, question, id);
 }
