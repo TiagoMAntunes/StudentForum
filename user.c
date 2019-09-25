@@ -186,9 +186,9 @@ void read_TCP(int fd, char* full_msg){
     return;
 }
 
-void write_TCP(int fd, char* reply, int len){
+void write_TCP(int fd, char* reply){
     int n, sent = 0;
-    int to_send = len;
+    int to_send = strlen(reply), len = to_send;
 
     n = write(fd, reply, len);
     if(n==-1) exit(1);
@@ -359,7 +359,7 @@ void receive_input(char* buffer, int fd_udp, int fd_tcp, struct addrinfo *res_ud
 
             //n = sendto(fd_tcp, message, msg_size, 0, res_tcp->ai_addr, res_tcp->ai_addrlen);
 
-            write_TCP(fd_tcp, message, msg_size);
+            write_TCP(fd_tcp, message);
 
         }
 
@@ -383,8 +383,29 @@ void receive_input(char* buffer, int fd_udp, int fd_tcp, struct addrinfo *res_ud
             n = connect(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
             if (n == -1) exit(1);
 
-            write_TCP(fd_tcp, message, msg_size - 1);
+            write_TCP(fd_tcp, message);
 
+        }
+
+        else if (strcmp(token, "answer_submit") == 0 || strcmp(token, "as") == 0) {
+            char * text_file, * image_file = NULL, * message;
+            int msg_size;
+            char qIMG; //flag
+            token = strtok(NULL, " ");
+            text_file = strdup(token);
+            token = strtok(NULL, " ");
+            if ((qIMG = token != NULL))
+                image_file = strdup(token);
+
+            msg_size = 15 + strlen(topic)  /* + size of txt file in bytes  + txt file data*/ + qIMG;
+            
+            message = malloc(sizeof(char) * msg_size);
+            sprintf(message, "ANS %d %s %d\n", userID, topic, /* qsize, qdata, */ qIMG );
+            n = connect(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
+            if (n == -1) exit(1);
+
+            write_TCP(fd_tcp, message);
+            printf("Enviado!\n");
         }
 
         else if (strcmp(token, "exit\n") == 0) {
