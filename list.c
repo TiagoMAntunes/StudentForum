@@ -31,7 +31,11 @@ void addEl(List *head, void *elToAdd)
 {
     List *el = createNode(elToAdd);
     el->next = head->next;
+    if (head->next != NULL) {
+        head->next->prev = el;
+    }
     head->next = el;
+    el->prev = head;
 }
 
 void print(List *el, void (*fn)())
@@ -44,6 +48,7 @@ List *newList()
     List *head = malloc(sizeof(List));
     head->next = NULL;
     head->current = NULL;
+    head->prev = NULL;
     return head;
 }
 
@@ -68,3 +73,4 @@ void *current(List *el)
 {
     return el->current;
 }
+

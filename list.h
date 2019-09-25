@@ -7,6 +7,7 @@ typedef struct list
 {
     struct list *next;
     void *current;
+    struct list *prev;
 } List;
 
 /**

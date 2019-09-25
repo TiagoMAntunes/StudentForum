@@ -6,6 +6,7 @@
 typedef struct
 {
     List *next;
+    List *prev;
 } Iterator;
 
 /**
@@ -27,6 +28,19 @@ int hasNext(Iterator *);
  * Returns a pointer to the next element
  */
 List *next(Iterator *);
+
+/**
+ * Receives a pointer to an iterator
+ * Returns true if previous element of iterator exists
+ */
+int hasPrev(Iterator *it);
+
+/**
+ * Iterator goes back and returns the previous element
+ * Receives a pointer to an iterator
+ * Returns a pointer to the previous element
+ */
+List *prev(Iterator *it);
 
 /**
  * Deletes the iterator from the program
