@@ -289,12 +289,12 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             token = strtok(NULL, " ");
             stringID = strdup(token);
 
-            if (verify_ID(stringID)) {
+        //    if (verify_ID(stringID)) {
                 userID = atoi(stringID);
                 free(stringID);
 
                 char *message = malloc(sizeof(char) * 11);
-                sprintf(message, "REG %d\n", userID);
+                sprintf(message, "REP %d\n", userID);
                 n = sendto(fd_udp, message, 11, 0, res_udp->ai_addr, res_udp->ai_addrlen);
                 if (n == -1) {
                     exit(ERROR);
@@ -306,7 +306,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
                 if (!receive_RGR(answer)) {
                     send_ERR_MSG_UDP(fd_udp, &res_udp);
-                }
+         //       }
 
                 free(message);
             }
