@@ -21,7 +21,7 @@
 #define ERR_LEN     4
 
 int topic_number = -1, question_number = -1;
-int n_topics = 500;     // TODO ir atualizando
+int n_topics = 0;     // TODO ir atualizando
 char *topic = "teste";
 char *question = NULL;
 
@@ -271,11 +271,49 @@ int ndigits(int i){
     return count;
 }
 
+void print_topic_list(List *topics) {
+    Iterator *it = createIterator(topics);
+
+    printf("AVAILABLE TOPICS:\n");
+
+    int n = 1;
+    while(hasNext(it)) {
+        List *topic= next(it); 
+        char* title = getTopicTitle(current(topic));
+        int id = getTopicID(current(topic));
+        printf("%d - %s (%d)\n", n++, title, id);
+    }
+}
+
+void update_topic_list(List* topics,char* answer) {
+
+    char *token = strtok(answer, " \n");  // LTR
+    token = strtok(NULL, " ");  //N
+    n_topics = atoi(token);
+    if (n_topics == 0) {
+        printf("No topics available.\n");
+    }
+    else {
+        for (int i = 0; i < n_topics; i++) {
+            char* title = strtok(NULL, ":");
+            char *stringID = strtok(NULL, " ");
+            int id = atoi(stringID);
+            // TODO verificar se o topico ja existe antes de adicionar
+            Topic *new = createTopic(title, id);
+            addEl(topics, new);
+        }
+
+        print_topic_list(topics);
+    }
+}
+
+
 void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *res_udp) {
     char *token, *stringID;
     int n, user_exists, short_cmmd = 0;
     char answer[1024];
     int tl_available = FALSE;
+    List *topics = newList();
 
     int fd_tcp; 
     struct addrinfo *res_tcp;
@@ -289,12 +327,12 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             token = strtok(NULL, " ");
             stringID = strdup(token);
 
-        //    if (verify_ID(stringID)) {
+            if (verify_ID(stringID)) {
                 userID = atoi(stringID);
                 free(stringID);
 
                 char *message = malloc(sizeof(char) * 11);
-                sprintf(message, "REP %d\n", userID);
+                sprintf(message, "REG %d\n", userID);
                 n = sendto(fd_udp, message, 11, 0, res_udp->ai_addr, res_udp->ai_addrlen);
                 if (n == -1) {
                     exit(ERROR);
@@ -306,7 +344,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
                 if (!receive_RGR(answer)) {
                     send_ERR_MSG_UDP(fd_udp, &res_udp);
-         //       }
+                }
 
                 free(message);
             }
@@ -323,11 +361,12 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 exit(ERROR);
             }
 
-            // TODO receive list of topics
             n = recvfrom(fd_udp, answer, 1024, 0, res_udp->ai_addr, &res_udp->ai_addrlen);
             printf("%s\n", answer);
 
             // TODO validar protocolo de LTR
+
+            update_topic_list(topics, answer);
 
             free(message);  
         }
