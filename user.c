@@ -271,6 +271,28 @@ int ndigits(int i){
     return count;
 }
 
+void get_img(char* filename, char* img, int size){
+    FILE* f;
+    char buffer[size];
+    int i = 0;
+
+    f = fopen(filename, "r");
+
+    if(f!=NULL){
+
+        while(!feof(f)) {
+            fread(buffer, 1, sizeof(buffer), f);
+        }
+
+        memcpy(img, buffer, size);
+
+        fclose (f);
+    }
+
+    return;
+}
+
+
 void print_topic_list(List *topics) {
     Iterator *it = createIterator(topics);
 
@@ -472,9 +494,10 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
         else if (strcmp(token, "question_submit") == 0 || strcmp(token, "qs") == 0) {
             char * question, * text_file, * image_file = NULL, * message;
-            char *qdata, ext_txt[5] = ".txt";
-            int msg_size, qsize, i;
-            char qIMG; //flag
+            char *qdata, *idata, ext_txt[5] = ".txt";
+            int msg_size, qsize, i, n;
+            int isize;
+            int qIMG; //flag
             token = strtok(NULL, " ");
             question = strdup(token);
             token = strtok(NULL, " ");
@@ -482,25 +505,59 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             strcpy(text_file, token);
             token = strtok(NULL, " ");
 
-            if ((qIMG = token != NULL))
+            if ((qIMG = token != NULL)){
                 image_file = strdup(token);
+                i = strlen(image_file) - 1;
+                image_file[i] = '\0';
+                printf("image file is: %s\n", image_file);
+            }
 
             else{//tirar o \n
                 i = strlen(text_file) - 1;
                 text_file[i] = '\0';
             }
 
-            strcat(text_file, ext_txt);
+            strcat(text_file, ext_txt);//add '.txt'
 
             qsize = get_filesize(text_file);
             qdata = (char*) malloc (sizeof(char) * qsize + 1);
             
             get_txtfile(text_file, qdata, qsize);
 
-            msg_size = 15 + strlen(topic) + strlen(question) + ndigits(qsize) + qsize + qIMG;
+            if(qIMG){//fun fact! imagens podem bue ter '\0's pelo meio e por isso n podem ser tratadas como string
+                isize = get_filesize(image_file);
+
+                printf("image size is %d\n", isize);
+
+                idata = (char*) malloc (sizeof(char) * qsize + 1);
+
+                get_img(image_file, idata, isize);
+
+                msg_size = 18 + strlen(topic) + strlen(question) + ndigits(qsize) + qsize + qIMG
+                        + ndigits(isize) + isize;
+
+                message = malloc(sizeof(char) * msg_size);
+                n = sprintf(message, "QUS %d %s %s %d %s %d %d ", userID, topic, question, qsize, qdata, qIMG, isize);
+                i = 0;
+
+                printf("current message: %s\n", message);
+
+                while(i<isize){
+                    message[n] = idata[i];
+                    n++;
+                    i++;
+                }
+                message[n++] = '\n';
+                message[n] = '\0'; //acho q isto n e preciso?
+            }
+
+            else{
+                msg_size = 16 + strlen(topic) + strlen(question) + ndigits(qsize) + qsize + qIMG;
+                
+                message = malloc(sizeof(char) * msg_size);
+                sprintf(message, "QUS %d %s %s %d %s %d\n", userID, topic, question, qsize, qdata, qIMG);
+            }
             
-            message = malloc(sizeof(char) * msg_size);
-            sprintf(message, "QUS %d %s %s %d %s\n", userID, topic, question, qsize, qdata /*qIMG*/ );
             printf("Message: %sSize: %d %d\n", message, strlen(message), msg_size);
             
             fd_tcp = create_TCP(hostname,  &res_tcp);
