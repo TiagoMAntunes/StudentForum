@@ -90,8 +90,7 @@ int topic_exists(List* topics, char* topic_title) {
     return 0;
 }
 
-char *list_topics(List* topics, int n_topics, int *str_size) {
-    char *list = (char*) malloc(sizeof(char) * 10 * n_topics);
+int list_topics(List* topics, int n_topics, char *list) {
     Iterator *it = createIterator(topics);
 
 
@@ -116,9 +115,9 @@ char *list_topics(List* topics, int n_topics, int *str_size) {
             list[t++] = ' ';
         }
     }
-    *str_size = t;
+    list[t++] = '\0';
     killIterator(it);
-    return list;
+    return t;
 
 }
 
@@ -242,15 +241,19 @@ int main(int argc, char *argv[])
                 n = sendto(fd_udp, "RGR OK\n", 7, 0, (struct sockaddr *) &user_addr, user_addrlen);
 
             } else if (strcmp(token, "LTP") == 0) {
-                int list_size;
-                char *list = list_topics(topics, n_topics, &list_size);
-                char *message = malloc(sizeof(char) * 6 + list_size);
-                sprintf(message, "LTR %d %s\n", n_topics, list);
+                if (n_topics > 0) {
+                    char *list = (char*) malloc(sizeof(char) * 17 * n_topics);
+                    int list_size = list_topics(topics, n_topics, list);
+                    char *message = malloc(sizeof(char) * (6 + list_size));
+                    sprintf(message, "LTR %d %s\n", n_topics, list);
 
-                n = sendto(fd_udp, message, strlen(message), 0, (struct sockaddr *) &user_addr, user_addrlen);
+                    n = sendto(fd_udp, message, 6 + list_size, 0, (struct sockaddr *) &user_addr, user_addrlen);
 
-                free(list);
-                free(message);
+                    free(list);
+                    free(message);
+                }
+                else 
+                    n = sendto(fd_udp, "LTR 0\n", 6, 0, (struct sockaddr *) &user_addr, user_addrlen);
 
             } else if (strcmp(token, "PTP") == 0) {
 

@@ -322,14 +322,14 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             if (n == -1) {
                 exit(ERROR);
             }
-            free(message);
 
             // TODO receive list of topics
             n = recvfrom(fd_udp, answer, 1024, 0, res_udp->ai_addr, &res_udp->ai_addrlen);
             printf("%s\n", answer);
 
             // TODO validar protocolo de LTR
-            
+
+            free(message);  
         }
 
         else if (user_exists && (strcmp(token, "topic_select") == 0 || strcmp(token, "ts")) == 0) {
@@ -357,7 +357,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             if (token == NULL) {
                 message = malloc(sizeof(char) * (strlen(propose_topic) + 12));
                 sprintf(message, "PTP %d %s\n", userID, propose_topic);
-                printf("%s", message);
+
                 n = sendto(fd_udp, message, strlen(message), 0, res_udp->ai_addr, res_udp->ai_addrlen);
                 if (n == -1) {
                     exit(ERROR);
@@ -367,16 +367,16 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 if (n == -1) 
                     exit(ERROR);
 
-                printf("%s\n", answer);
                 if (!receive_PTR(answer)) {
                     send_ERR_MSG_UDP(fd_udp, &res_udp);
                 }
 
                 free(message);
-                free(propose_topic);
             }
             else
                 printf("Invalid command.\ntopic_propose topic / tp topic\n");
+            
+            free(propose_topic);
 
         }
 
