@@ -200,7 +200,6 @@ void write_TCP(int fd, char* reply, int msg_size){
         if(n==-1) exit(1);
     }
     write(1, reply, msg_size);
-    printf("Last chars values: %d %d\n", reply[msg_size-2], reply[msg_size-1]);
 }
 
 void send_ERR_MSG_UDP(int fd, struct addrinfo **res) {
@@ -542,10 +541,10 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             }
 
             else{
-                msg_size = 16 + strlen(topic) + strlen(question) + ndigits(qsize) + qsize + qIMG;
+                msg_size = 17 + strlen(topic) + strlen(question) + ndigits(qsize) + qsize;
                 
-                message = malloc(sizeof(char) * msg_size);
-                sprintf(message, "QUS %d %s %s %d %s %d\n", userID, topic, question, qsize, qdata, qIMG);
+                message = malloc(sizeof(char) * (msg_size));
+                sprintf(message, "QUS %d %s %s %d %s 0\n", userID, topic, question, qsize, qdata, qIMG);
             }
             
             
