@@ -327,7 +327,7 @@ int main(int argc, char *argv[])
                     if (n_topics > 0) {
                         char *list = (char*) malloc(sizeof(char) * 17 * n_topics);
                         int list_size = list_topics(topics, n_topics, list);
-                        char *message = malloc(sizeof(char) * (6 + list_size));
+                        char *message = malloc(sizeof(char) * (7 + list_size));
                         sprintf(message, "LTR %d %s\n", n_topics, list);
 
                         n = sendto(fd_udp, message, 6 + list_size, 0, (struct sockaddr *) &user_addr, user_addrlen);

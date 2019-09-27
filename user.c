@@ -260,7 +260,7 @@ int get_filesize(char* filename){
 }
 
 int ndigits(int i){
-    int count;
+    int count = 0;
 
     while(i != 0)
     {
@@ -529,12 +529,18 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
                 printf("image size is %d\n", isize);
 
-                idata = (char*) malloc (sizeof(char) * qsize + 1);
+                idata = (char*) malloc (sizeof(char) * (isize + 1));
 
                 get_img(image_file, idata, isize);
 
-                msg_size = 18 + strlen(topic) + strlen(question) + ndigits(qsize) + qsize + qIMG
-                        + ndigits(isize) + isize;
+                printf("Topic: %d\n", strlen(topic));
+                printf("Question: %d\n", strlen(question));
+                printf("Digits qsize: %d\n", ndigits(qsize)); //fix ndigits
+                printf("qsize: %d\n", qsize);
+                printf("qIMG: %d\n", qIMG);
+                printf("isize: %d\n", ndigits(isize));
+                printf("isize: %d\n", isize);
+                msg_size = 18 + strlen(topic) + strlen(question) + ndigits(qsize) + qsize + qIMG + ndigits(isize) + isize;
 
                 message = malloc(sizeof(char) * msg_size);
                 n = sprintf(message, "QUS %d %s %s %d %s %d %d ", userID, topic, question, qsize, qdata, qIMG, isize);

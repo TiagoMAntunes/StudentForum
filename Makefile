@@ -23,4 +23,4 @@ $(OBJS):
 	$(CC) $(FLAGS) -c -o $@ $<
 
 clean:
-	rm $(TARGETS) $(OBJS)
+	rm $(TARGETS) *.o
