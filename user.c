@@ -319,6 +319,16 @@ void update_topic_list(List* topics,char* answer) {
     }
 }
 
+void getExtension(char * image, char * ext) {
+    int i, j;
+    for (i = 0; image[i] != '.'; i++)
+        ;
+
+    while (image[i] != '\0' && j < 3) {
+        ext[j++] = image[i++];
+    }
+    ext[3] = 0;
+}
 
 void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *res_udp) {
     char *token, *stringID;
@@ -499,7 +509,8 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             if ((qIMG = token != NULL)){
                 image_file = strdup(token);
                 i = strlen(image_file) - 1;
-                image_file[i] = '\0';
+                if (image_file[i] == '\n')
+                    image_file[i] = '\0';  
                 printf("image file is: %s\n", image_file);
             }
 
@@ -507,28 +518,27 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 i = strlen(text_file) - 1;
                 text_file[i] = '\0';
             }
-
-            strcat(text_file, ext_txt);//add '.txt'
+            //strcat(text_file, ext_txt); add '.txt'
 
             qsize = get_filesize(text_file);
             qdata = (char*) malloc (sizeof(char) * qsize + 1);
             
             get_txtfile(text_file, qdata, qsize);
 
-            if(qIMG){//fun fact! imagens podem bue ter '\0's pelo meio e por isso n podem ser tratadas como string
+            if(qIMG) {
                 isize = get_filesize(image_file);
                 idata = (char*) malloc (sizeof(char) * (isize));
+                char ext[4];
 
+                getExtension(image_file, ext);
                 get_img(image_file, idata, isize);
 
-                msg_size = 18 + strlen(topic) + strlen(question) + ndigits(qsize) + qsize + ndigits(qIMG) + ndigits(isize) + isize;
+                msg_size = 21 + strlen(topic) + strlen(question) + ndigits(qsize) + qsize + ndigits(qIMG) + ndigits(isize) + isize;
 
                 message = calloc(msg_size,sizeof(char));
-                n = sprintf(message, "QUS %d %s %s %d %s %d %d ", userID, topic, question, qsize, qdata, qIMG, isize);
-
-                i = 0;
-                while(i<isize)
-                    message[n++] = idata[i++];
+                n = sprintf(message, "QUS %d %s %s %d %s %d %s %d ", userID, topic, question, qsize, qdata, qIMG, ext,isize);
+                memcpy(message + n, idata, isize); //copy image to message
+                
                 message[msg_size-2] = '\n';
                 message[msg_size-1] = '\0'; //acho q isto n e preciso?
             }
