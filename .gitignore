@@ -2,7 +2,9 @@
 FS
 user
 .gdb_history
-
+topics/
 test.txt
-
 pic.png
+file.txt
+image.jpg
+input

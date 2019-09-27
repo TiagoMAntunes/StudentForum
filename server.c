@@ -13,6 +13,7 @@
 #include "list.h"
 #include "topic.h"
 #include "iterator.h"
+#include "file_management.h"
 
 #define ERROR       1
 #define MAX_TOPICS  10
@@ -280,7 +281,7 @@ void TCP_input_validation(char * message, int msg_size) {
         img_data = calloc(isize, sizeof(char));
         memcpy(img_data, token, isize);
 
-        
+        createQuestion(topic, question, qdata, qsize,img_data, isize, ext);
 
     }
 }
