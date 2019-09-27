@@ -323,7 +323,7 @@ void getExtension(char * image, char * ext) {
     int i, j;
     for (i = 0; image[i] != '.'; i++)
         ;
-
+    i++;
     while (image[i] != '\0' && j < 3) {
         ext[j++] = image[i++];
     }

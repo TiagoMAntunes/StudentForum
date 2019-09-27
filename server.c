@@ -225,6 +225,66 @@ int validate_LQU(char *msg) {   // TODO tem de validar a existencia do topico?
     return token == NULL;
 }
 
+int ndigits(int i){
+    int count = 0;
+
+    while(i != 0)
+    {
+        i /= 10;
+        ++count;
+    }
+
+    return count;
+}
+
+void TCP_input_validation(char * message, int msg_size) {
+    char * token, * prefix;
+    token = strtok(message, " ");
+    prefix = strdup(token);
+
+    if (strcmp(prefix, "QUS") == 0) {
+        char * topic, * question, * userID, * qdata, * ext, * img_data;
+        int qsize, qIMG, isize;
+
+        token = strtok(NULL, " ");
+        userID = strdup(token);
+
+        token = strtok(NULL, " ");
+        topic = strdup(token);
+
+        token = strtok(NULL, " ");
+        question = strdup(token);
+
+        token = strtok(NULL, " ");
+        qsize = atoi(token);
+
+
+        //manually copy
+        token += ndigits(qsize) + 1;
+        qdata = calloc(qsize, sizeof(char));
+        memcpy(qdata, token, qsize);
+
+        //strtok after skipping
+        token += qsize + 1;
+        token = strtok(token , " ");
+        qIMG = atoi(token);
+
+        token = strtok(NULL, " ");
+        ext = strdup(token);
+
+        token = strtok(NULL, " ");
+        isize = atoi(token);
+
+        //reposition to avoid destroying data
+        token += ndigits(isize) + 1;
+        img_data = calloc(isize, sizeof(char));
+        memcpy(img_data, token, isize);
+
+        
+
+    }
+}
+
 int main(int argc, char *argv[])
 {
     int fd_tcp, fd_udp, newfd, pid;
@@ -282,7 +342,8 @@ int main(int argc, char *argv[])
                     int reply_len;
 
                     msg_size = read_TCP(newfd, &message, msg_size);
-                    printf("Message received: %s", message);
+                    printf("Message received: %s\n", message);
+                    TCP_input_validation(message, msg_size);
                     exit(0);
 
                 }
