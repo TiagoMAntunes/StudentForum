@@ -170,22 +170,19 @@ int receive_PTR(char* answer) {
     return 1;
 }
 
-void read_TCP(int fd, char* full_msg){
-    char buffer[MAX_REQ_LEN], c;
-    int n;
-
-    n = read(fd, buffer, MAX_REQ_LEN);
-
-    c = buffer[n-1];
-    while (c != '\n') {
-        n = read(fd, buffer + n, MAX_REQ_LEN - n);
-        c = buffer[n-1];
+int read_TCP(int fd, char** full_msg, int msg_size){
+    int n = read(fd, *full_msg, msg_size);
+    
+    while((*full_msg)[n-2] != '\n') {
+        msg_size *= 2;
+        *full_msg = realloc(*full_msg, msg_size);
+        n += read(fd, *full_msg + n, msg_size - n);
+        
     }
     
-    strcpy(full_msg, buffer);
-
-    return;
+    return msg_size;
 }
+
 
 void write_TCP(int fd, char* reply, int msg_size){
     int n;
@@ -195,7 +192,6 @@ void write_TCP(int fd, char* reply, int msg_size){
 
     
     while(n < msg_size){
-        printf("I'm in!\n");
         n = write(fd, reply + n, msg_size - n);
         if(n==-1) exit(1);
     }
@@ -492,6 +488,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             int msg_size, qsize, i, n;
             int isize;
             int qIMG; //flag
+
             token = strtok(NULL, " ");
             question = strdup(token);
             token = strtok(NULL, " ");
@@ -529,13 +526,9 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 message = calloc(msg_size,sizeof(char));
                 n = sprintf(message, "QUS %d %s %s %d %s %d %d ", userID, topic, question, qsize, qdata, qIMG, isize);
 
-                printf("current message: %s\nWrote: %d\n", message, n);
-
                 i = 0;
                 while(i<isize)
                     message[n++] = idata[i++];
-                printf("Current n: %d\n", n);
-                printf("Msg_size: %d\n", msg_size);
                 message[msg_size-2] = '\n';
                 message[msg_size-1] = '\0'; //acho q isto n e preciso?
             }

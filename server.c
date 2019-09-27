@@ -157,48 +157,26 @@ int read_TCP(int fd, char** full_msg, int msg_size){
     
     while((*full_msg)[n-2] != '\n') {
         msg_size *= 2;
-        printf("Allocating with size: %d; Current n: %d\n", msg_size, n);
         *full_msg = realloc(*full_msg, msg_size);
         n += read(fd, *full_msg + n, msg_size - n);
         
     }
     
-    /*char buffer[MAX_REQ_LEN], c;
-    int n;
-
-    n = read(fd, buffer, MAX_REQ_LEN);
-
-    c = buffer[n-1];
-    while (c != '\n') {
-        n = read(fd, buffer + n, MAX_REQ_LEN - n);
-        c = buffer[n-1];
-    }
-    
-    strcpy(full_msg, buffer);
-    */
-    printf("Total size: %d\n", msg_size);
     return msg_size;
 }
 
-void write_TCP(int fd, char* reply, int len){
-    int n, sent = 0;
-    int to_send = len;
+void write_TCP(int fd, char* reply, int msg_size){
+    int n;
 
-    n = write(fd, reply, len);
+    n = write(fd, reply, msg_size);
     if(n==-1) exit(1);
 
-    sent = n;
-    to_send -= n;
-
-    while(sent<len){
-        n = write(fd, reply + sent, to_send);
+    
+    while(n < msg_size){
+        n = write(fd, reply + n, msg_size - n);
         if(n==-1) exit(1);
-
-        sent += n;
-        to_send -= n;
     }
-
-    return;
+    write(1, reply, msg_size);
 }
 
 int validate_REG(char *msg) {
