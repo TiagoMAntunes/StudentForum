@@ -9,11 +9,12 @@
 #include <stdio.h>
 #include <signal.h>
 #include <errno.h>
-#include "hash.h"
-#include "list.h"
-#include "topic.h"
-#include "iterator.h"
-#include "file_management.h"
+
+#include "lib/hash.h"
+#include "lib/list.h"
+#include "lib/topic.h"
+#include "lib/iterator.h"
+#include "lib/file_management.h"
 
 #define ERROR       1
 #define MAX_TOPICS  10

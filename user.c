@@ -8,9 +8,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
-#include "list.h"
-#include "topic.h"
-#include "iterator.h"
+#include "lib/list.h"
+#include "lib/topic.h"
+#include "lib/iterator.h"
 
 #define PORT        "58017"
 #define ERROR       1

@@ -3,7 +3,7 @@ FLAGS=-Wall -g -lm
 TARGETS=FS user
 SOURCES=server.c user.c
 OBJS = $(SOURCES:%.c=%.o)
-DEPENDENCIES=list.o iterator.o hash.o topic.o file_management.o
+DEPENDENCIES=lib/list.o lib/iterator.o lib/hash.o lib/topic.o lib/file_management.o
 all: $(TARGETS)
 
 FS: server.o $(DEPENDENCIES)
@@ -14,15 +14,15 @@ user: user.o $(DEPENDENCIES)
 
 server.o: server.c 
 user.o: user.c
-hash.o: hash.c hash.h list.o
-list.o: list.c list.h iterator.o
-iterator.o: iterator.c iterator.h
-file_management.o: file_management.c file_management.h
-topic.o: topic.c topic.h
+lib/hash.o: lib/hash.c lib/hash.h 
+lib/list.o: lib/list.c lib/list.h 
+lib/iterator.o: lib/iterator.c lib/iterator.h
+lib/file_management.o: lib/file_management.c lib/file_management.h
+lib/topic.o: lib/topic.c lib/topic.h
 $(OBJS):
 	$(CC) $(FLAGS) -c -o $@ $<
 
 $(DEPENDENCIES):
 	$(CC) $(FLAGS) -c -o $@ $<
 clean:
-	rm $(TARGETS) *.o
+	rm $(TARGETS) *.o lib/*.o
