@@ -195,7 +195,7 @@ void write_TCP(int fd, char* reply, int msg_size){
         n = write(fd, reply + n, msg_size - n);
         if(n==-1) exit(1);
     }
-    write(1, reply, msg_size);
+    //write(1, reply, msg_size);
 }
 
 void send_ERR_MSG_UDP(int fd, struct addrinfo **res) {
@@ -320,7 +320,7 @@ void update_topic_list(List* topics,char* answer) {
 }
 
 void getExtension(char * image, char * ext) {
-    int i, j;
+    int i, j = 0;
     for (i = 0; image[i] != '.'; i++)
         ;
     i++;
@@ -538,7 +538,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 message = calloc(msg_size,sizeof(char));
                 n = sprintf(message, "QUS %d %s %s %d %s %d %s %d ", userID, topic, question, qsize, qdata, qIMG, ext,isize);
                 memcpy(message + n, idata, isize); //copy image to message
-                
+                printf("Image size: %d\n", isize);
                 message[msg_size-2] = '\n';
                 message[msg_size-1] = '\0'; //acho q isto n e preciso?
             }

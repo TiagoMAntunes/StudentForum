@@ -278,11 +278,18 @@ void TCP_input_validation(char * message, int msg_size) {
         isize = atoi(token);
 
         //reposition to avoid destroying data
-        token += ndigits(isize) + 1;
+        token += ndigits(isize)+1;
         img_data = calloc(isize, sizeof(char));
         memcpy(img_data, token, isize);
 
         createQuestion(topic, question, qdata, qsize,img_data, isize, ext);
+
+        free(topic);
+        free(question);
+        free(userID);
+        free(qdata);
+        free(ext);
+        free(img_data);
 
     }
 }
