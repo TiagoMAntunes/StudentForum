@@ -27,16 +27,18 @@ void createQuestion(char * topic, char * question, char * text, int text_size, c
     char * dir = calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 3,sizeof(char));
     sprintf(file_text, "%s%s/%s/question.txt", PREFIX, topic, question);
     sprintf(file_img, "%s%s/%s/image.%s", PREFIX, topic, question, ext);
-    sprintf(dir, "%s%s/", PREFIX, topic);
+    sprintf(dir, "%s%s/%s/", PREFIX, topic, question);
     printf("%s\n%s\n", file_text, file_img);
     
     struct stat sb;
 
+    printf("Checking directory %s\n", dir);
     if (stat(dir, &sb) == -1) {
         printf("Directories missing. Creating...\n");
       
         int check = mkdir(PREFIX, 0700);
-      
+
+        sprintf(dir, "%s%s/", PREFIX, topic);
         check = mkdir(dir, 0700);
       
         sprintf(dir, "%s%s/%s/", PREFIX, topic, question);
