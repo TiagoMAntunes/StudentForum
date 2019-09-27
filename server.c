@@ -152,8 +152,18 @@ int list_topics(List* topics, int n_topics, char *list) {
 
 }
 
-void read_TCP(int fd, char* full_msg){
-    char buffer[MAX_REQ_LEN], c;
+int read_TCP(int fd, char** full_msg, int msg_size){
+    int n = read(fd, *full_msg, msg_size);
+    
+    while((*full_msg)[n-2] != '\n') {
+        msg_size *= 2;
+        printf("Allocating with size: %d; Current n: %d\n", msg_size, n);
+        *full_msg = realloc(*full_msg, msg_size);
+        n += read(fd, *full_msg + n, msg_size - n);
+        
+    }
+    
+    /*char buffer[MAX_REQ_LEN], c;
     int n;
 
     n = read(fd, buffer, MAX_REQ_LEN);
@@ -165,8 +175,9 @@ void read_TCP(int fd, char* full_msg){
     }
     
     strcpy(full_msg, buffer);
-
-    return;
+    */
+    printf("Total size: %d\n", msg_size);
+    return msg_size;
 }
 
 void write_TCP(int fd, char* reply, int len){
@@ -288,10 +299,11 @@ int main(int argc, char *argv[])
                     printf("dei fork\n");
                     //write(newfd, "Oi babyyy\n", 11);
                     
-                    char message[1024];
+                    int msg_size = MAX_REQ_LEN;
+                    char * message = malloc(sizeof(char) * msg_size);
                     int reply_len;
 
-                    read_TCP(newfd, message);
+                    msg_size = read_TCP(newfd, &message, msg_size);
                     printf("Message received: %s", message);
                     exit(0);
 

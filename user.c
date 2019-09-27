@@ -187,25 +187,20 @@ void read_TCP(int fd, char* full_msg){
     return;
 }
 
-void write_TCP(int fd, char* reply){
-    int n, sent = 0;
-    int to_send = strlen(reply), len = to_send;
+void write_TCP(int fd, char* reply, int msg_size){
+    int n;
 
-    n = write(fd, reply, len);
+    n = write(fd, reply, msg_size);
     if(n==-1) exit(1);
 
-    sent = n;
-    to_send -= n;
-
-    while(sent<len){
-        n = write(fd, reply + sent, to_send);
+    
+    while(n < msg_size){
+        printf("I'm in!\n");
+        n = write(fd, reply + n, msg_size - n);
         if(n==-1) exit(1);
-
-        sent += n;
-        to_send -= n;
     }
-
-    return;
+    write(1, reply, msg_size);
+    printf("Last chars values: %d %d\n", reply[msg_size-2], reply[msg_size-1]);
 }
 
 void send_ERR_MSG_UDP(int fd, struct addrinfo **res) {
@@ -486,7 +481,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             //n = sendto(fd_tcp, message, msg_size, 0, res_tcp->ai_addr, res_tcp->ai_addrlen);
 
 
-            write_TCP(fd_tcp, message);
+            write_TCP(fd_tcp, message, msg_size);
 
             //TODO if reply is not 'QGR EOF' or 'QGR ERR', save question_title as currently selected question
             close(fd_tcp);
@@ -526,35 +521,24 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
             if(qIMG){//fun fact! imagens podem bue ter '\0's pelo meio e por isso n podem ser tratadas como string
                 isize = get_filesize(image_file);
-
-                printf("image size is %d\n", isize);
-
-                idata = (char*) malloc (sizeof(char) * (isize + 1));
+                idata = (char*) malloc (sizeof(char) * (isize));
 
                 get_img(image_file, idata, isize);
 
-                printf("Topic: %d\n", strlen(topic));
-                printf("Question: %d\n", strlen(question));
-                printf("Digits qsize: %d\n", ndigits(qsize)); //fix ndigits
-                printf("qsize: %d\n", qsize);
-                printf("qIMG: %d\n", qIMG);
-                printf("isize: %d\n", ndigits(isize));
-                printf("isize: %d\n", isize);
-                msg_size = 18 + strlen(topic) + strlen(question) + ndigits(qsize) + qsize + qIMG + ndigits(isize) + isize;
+                msg_size = 18 + strlen(topic) + strlen(question) + ndigits(qsize) + qsize + ndigits(qIMG) + ndigits(isize) + isize;
 
-                message = malloc(sizeof(char) * msg_size);
+                message = calloc(msg_size,sizeof(char));
                 n = sprintf(message, "QUS %d %s %s %d %s %d %d ", userID, topic, question, qsize, qdata, qIMG, isize);
+
+                printf("current message: %s\nWrote: %d\n", message, n);
+
                 i = 0;
-
-                printf("current message: %s\n", message);
-
-                while(i<isize){
-                    message[n] = idata[i];
-                    n++;
-                    i++;
-                }
-                message[n++] = '\n';
-                message[n] = '\0'; //acho q isto n e preciso?
+                while(i<isize)
+                    message[n++] = idata[i++];
+                printf("Current n: %d\n", n);
+                printf("Msg_size: %d\n", msg_size);
+                message[msg_size-2] = '\n';
+                message[msg_size-1] = '\0'; //acho q isto n e preciso?
             }
 
             else{
@@ -564,13 +548,12 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 sprintf(message, "QUS %d %s %s %d %s %d\n", userID, topic, question, qsize, qdata, qIMG);
             }
             
-            printf("Message: %sSize: %d %d\n", message, strlen(message), msg_size);
             
             fd_tcp = create_TCP(hostname,  &res_tcp);
             n = connect(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
             if (n == -1) exit(1);
 
-            write_TCP(fd_tcp, message);
+            write_TCP(fd_tcp, message, msg_size);
             close(fd_tcp);
 
         }
@@ -594,7 +577,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             n = connect(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
             if (n == -1) exit(1);
 
-            write_TCP(fd_tcp, message);
+            write_TCP(fd_tcp, message, msg_size);
             printf("Enviado!\n");
             close(fd_tcp);
         }
