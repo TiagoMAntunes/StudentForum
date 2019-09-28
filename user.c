@@ -464,7 +464,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             free(message);  
         }
 
-        else if (user_exists && (strcmp(token, "topic_select") == 0 || strcmp(token, "ts")) == 0) {
+        else if (user_exists && (strcmp(token, "topic_select") == 0 || strcmp(token, "ts") == 0)) {
             if (tl_available) {
                 short_cmmd = strcmp(token, "ts") == 0 ? 1 : 0;
                 token = strtok(NULL, " ");
