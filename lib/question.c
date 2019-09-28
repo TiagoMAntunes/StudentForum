@@ -5,13 +5,14 @@
 #include "iterator.h"
 #include "answer.h"
 
-Question *newQuestion(char *text, char *image) {
+Question *newQuestion(char *text, int image, int id) {
     Question *new = (Question *) malloc(sizeof(struct question));
 
-    new->text = strdup(text);
-    new->image = strdup(image);
+    new->title = strdup(text);
+    new->image = image;
     new->answers = newList();
     new->n_answers = 0;
+    new->userID = id;
 
     return new;
 }
@@ -28,9 +29,11 @@ void deleteAnswers(Question *q) {
     free(q->answers);
 }
 
+char *getQuestionTitle(Question *q) { return q->title; }
+int getQuestionID(Question *q) {return q->userID; }
+
 void deleteQuestion(Question *q) {
     deleteAnswers(q);
-    if (q->text != NULL) free(q->text);
-    if (q->image != NULL) free(q->image);
+    if (q->title != NULL) free(q->title);
     free(q);
 } 

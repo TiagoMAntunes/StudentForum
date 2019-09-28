@@ -4,6 +4,7 @@
 #include "question.h"
 #include "iterator.h"
 #include <string.h>
+#include <stdio.h>
 
 
 Topic* createTopic(char* title, int userID) {
@@ -22,6 +23,20 @@ char* getTopicTitle(Topic* topic) {
 
 int getTopicID(Topic* topic) {
     return topic->userID;
+}
+
+int hasQuestions(Topic *topic) {
+    return (topic->n_questions == 0 ? 0 : 1);
+}
+
+void printTopicQuestions(Topic *topic) {
+    Iterator *it = createIterator(topic->questions);
+    int n = 0;
+
+    while (hasNext(it) && n < 10) {
+        Question *q = current(next(it));
+        printf("%d - %s (%d)\n", ++n, getQuestionTitle(q), getQuestionID(q));
+    }
 }
 
 void addQuestion(Topic *topic, Question* question, unsigned long id) {

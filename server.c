@@ -284,8 +284,6 @@ void TCP_input_validation(char * message, int msg_size) {
         img_data = calloc(isize, sizeof(char));
         memcpy(img_data, token, isize);
 
-        createQuestion(topic, question, qdata, qsize,img_data, isize, ext);
-
         free(topic);
         free(question);
         free(userID);
@@ -304,6 +302,7 @@ int main(int argc, char *argv[])
     struct sockaddr_in user_addr;
     fd_set set;
     List *topics = newList();
+    Hash *topics_hash = createTable(1024, sizeof(List));
     Hash *users = createTable(1024, sizeof(List));
     int n_topics = 0;
 
@@ -436,6 +435,7 @@ int main(int argc, char *argv[])
                     else {
                         Topic* new = createTopic(topic_title, atoi(stringID));
                         addEl(topics, new);
+                        insertInTable(topics_hash, new, hash(topic_title));
                         n_topics++;
 
                         n = sendto(fd_udp, "PTR OK", 7, 0, (struct sockaddr *) &user_addr, user_addrlen);

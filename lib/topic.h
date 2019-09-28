@@ -16,6 +16,7 @@ typedef struct {
 Topic* createTopic(char* title, int userID);
 char* getTopicTitle(Topic* topic);
 int getTopicID(Topic* topic);
+void printTopicQuestion(Topic *topic);
 void addQuestion(Topic *topic, Question* question, unsigned long id);
 void deleteQuestions(Topic *topic);
 void deleteTopic(Topic* topic);

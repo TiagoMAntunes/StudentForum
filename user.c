@@ -313,7 +313,6 @@ void get_img(char* filename, char* img, int size){
     return;
 }
 
-
 void print_topic_list(List *topics) {
     Iterator *it = createIterator(topics);
 
@@ -350,6 +349,33 @@ void update_topic_list(List* topics, Hash *topics_hash, char* answer) {
 
         print_topic_list(topics);
     }
+}
+
+void update_question_list(Hash * topics_hash, char *answer) {
+    char *token = strtok(answer, " ");    // LQU
+    token = strtok(NULL, " ");  // N
+    int n_questions = atoi(token);
+    
+    List *topic_list = findInTable(topics_hash, hash(topic));
+    Topic *current_topic;
+    Iterator *it = createIterator(it);
+    while (hasNext(it)) {
+        current_topic = current(next(it));
+        if (strcmp(getTopicTitle(current_topic), topic) == 0) 
+            break;
+    }
+
+    if (n_questions > 0) {
+        printf("Topic : %s -> Questions:\n", topic);
+        printTopicQuestions(current_topic);
+    }  
+
+    else {
+        printf("Topic \"%s\" has no questions available.\n");
+    }
+
+    killIterator(it);
+
 }
 
 void freeTopics(List *topics) {
@@ -389,7 +415,6 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
         bzero(answer, 1024);
         fgets(buffer, 1024, stdin);
         token = strtok(buffer, " ");
-        printf("command = %s\n", token);
 
         if (strcmp(token, "reg") == 0 || strcmp(token, "register") == 0) {
             token = strtok(NULL, " ");
@@ -488,25 +513,30 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
         }
 
         else if (user_exists && (strcmp(token, "question_list\n") == 0|| strcmp(token, "ql\n")) == 0) {
-            printf("Entered with topic: %p\n", topic);
-            char * message;
             if (topic != NULL) {
-                message = malloc(sizeof(char) * (strlen(topic) + 5));
+                char * message;
+                int topic_len = strlen(topic);
+                message = malloc(sizeof(char) * (topic_len + 6));
                 sprintf(message, "LQU %s\n", topic);
+
+                n = sendto(fd_udp, message, strlen(message), 0, res_udp->ai_addr, res_udp->ai_addrlen);
+                if (n == -1) {
+                    exit(ERROR);
+                }
+
+                n = recvfrom(fd_udp, answer, 1024, 0, res_udp->ai_addr, &res_udp->ai_addrlen);
+                printf("%s\n", answer);
+
+                // TODO LQU protocol validation?
+                update_question_list(topics_hash, answer);
+
+                free(message);
             }
+            
             else {
-                message = malloc(sizeof(char) * 17);
-                sprintf(message, "LQU %d\n", topic_number);
+                printf("No topic selected.\n");
             }
-            n = sendto(fd_udp, message, strlen(message), 0, res_udp->ai_addr, res_udp->ai_addrlen);
-            if (n == -1) {
-                exit(ERROR);
-            }
-
-            n = recvfrom(fd_udp, answer, 1024, 0, res_udp->ai_addr, &res_udp->ai_addrlen);
-            printf("%s\n", answer);
-
-            free(message);
+            
         }
 
 // TCP FROM NOW ON
@@ -641,7 +671,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             printf("You need to login.\n");
         }
         else {
-        //    printf("%s\n", token);
+            printf("%s\n", token);
             printf("Unknown command. Try again.\n");
         }
         printf(">>> ");
