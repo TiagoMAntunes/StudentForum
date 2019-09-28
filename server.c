@@ -156,14 +156,20 @@ int list_topics(List* topics, int n_topics, char *list) {
 
 }
 
-int read_TCP(int fd, char** full_msg, int msg_size){
-    int n = read(fd, *full_msg, msg_size);
-    
-    while((*full_msg)[n-2] != '\n') {
+int read_TCP(int fd, char** full_msg, int msg_size, int current_offset){
+    int n = read(fd, *full_msg + current_offset, msg_size - current_offset);
+    int c;
+    if (n == 0) return msg_size;
+    if (n == msg_size) {
         msg_size *= 2;
         *full_msg = realloc(*full_msg, msg_size);
-        n += read(fd, *full_msg + n, msg_size - n);
-        
+    }
+    while( (c = read(fd, *full_msg + n + current_offset, msg_size - current_offset - n)) != 0) {
+        //printf("Value of c: %d\n", c);
+        if (c + n >= msg_size)
+            msg_size *= 2;
+        *full_msg = realloc(*full_msg, msg_size);
+        n += c;
     }
     
     return msg_size;
@@ -241,7 +247,7 @@ int ndigits(int i){
     return count;
 }
 
-void TCP_input_validation(char * message, int msg_size) {
+void TCP_input_validation(int fd, char * message, int msg_size) {
     char * token, * prefix;
     token = strtok(message, " ");
     prefix = strdup(token);
@@ -265,6 +271,15 @@ void TCP_input_validation(char * message, int msg_size) {
 
         //manually copy
         token += ndigits(qsize) + 1;
+        if (msg_size < qsize - (token - message)) {
+            printf("---------- QSIZE REALLOC ----------\n");
+            int offset = token - message;
+            msg_size = read_TCP(fd, &message, msg_size, offset);
+            token = message + offset;
+            printf("-----------NEW MESSAGE-------- \n");
+            write(1, message, msg_size);
+            printf("\nEND-----------------\n");
+        }
         qdata = calloc(qsize, sizeof(char));
         memcpy(qdata, token, qsize);
 
@@ -282,7 +297,18 @@ void TCP_input_validation(char * message, int msg_size) {
         //reposition to avoid destroying data
         token += ndigits(isize)+1;
         img_data = calloc(isize, sizeof(char));
+        if (msg_size < isize - (token - message)) {
+            printf("---------- ISIZE REALLOC ----------\n");
+            int offset = token - message;
+            msg_size = read_TCP(fd, &message, msg_size, offset);
+            token = message + offset;
+            printf("-----------NEW MESSAGE-------- \n");
+            write(1, message, msg_size);
+            printf("\nEND-----------------\n");
+        }
         memcpy(img_data, token, isize);
+
+        createQuestion(topic, question, qdata, qsize,img_data, isize, ext);
 
         free(topic);
         free(question);
@@ -351,9 +377,9 @@ int main(int argc, char *argv[])
                     char * message = malloc(sizeof(char) * msg_size);
                     int reply_len;
 
-                    msg_size = read_TCP(newfd, &message, msg_size);
+                    msg_size = read_TCP(newfd, &message, msg_size, 0);
                     printf("Message received: %s\n", message);
-                    TCP_input_validation(message, msg_size);
+                    TCP_input_validation(newfd, message, msg_size);
                     exit(0);
 
                 }
