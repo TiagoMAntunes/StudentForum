@@ -316,8 +316,9 @@ void TCP_input_validation(int fd, char * message, int msg_size) {
         free(qdata);
         free(ext);
         free(img_data);
-
     }
+    
+    free(prefix);
 }
 
 int main(int argc, char *argv[])
@@ -380,6 +381,7 @@ int main(int argc, char *argv[])
                     msg_size = read_TCP(newfd, &message, msg_size, 0);
                     printf("Message received: %s\n", message);
                     TCP_input_validation(newfd, message, msg_size);
+                    free(message);
                     exit(0);
 
                 }

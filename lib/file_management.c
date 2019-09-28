@@ -54,6 +54,10 @@ void createQuestion(char * topic, char * question, char * text, int text_size, c
     f = fopen(file_img, "w+");
     fwrite(image, sizeof(char), image_size, f);
     fclose(f);
+
+    free(file_text);
+    free(file_img);
+    free(dir);
 }
 
 void createAnswer(Topic * topic, char * question, char * text, char * image) {
@@ -83,5 +87,6 @@ List * getTopicQuestions(char * topic, int * list_size) {
             }
 
     closedir(dir);
+    free(dir_name);
     return list;
 }
