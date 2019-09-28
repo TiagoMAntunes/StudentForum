@@ -15,6 +15,8 @@
 #include "lib/topic.h"
 #include "lib/iterator.h"
 #include "lib/file_management.h"
+#include "lib/question.h"
+#include "lib/answer.h"
 
 #define ERROR       1
 #define MAX_TOPICS  10

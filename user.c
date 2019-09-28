@@ -11,6 +11,8 @@
 #include "lib/list.h"
 #include "lib/topic.h"
 #include "lib/iterator.h"
+#include "lib/question.h"
+#include "lib/answer.h"
 
 #define PORT        "58017"
 #define ERROR       1
@@ -22,7 +24,7 @@
 
 int topic_number = -1, question_number = -1;
 int n_topics = 0;     
-char *topic = "teste";
+char *topic = NULL;
 char *question = NULL;
 
 
@@ -89,44 +91,67 @@ int topic_exists(Hash* topics_hash, char *topic) {
 
     while (hasNext(it)) {
         if (strcmp(getTopicTitle(current(next(it))), topic) == 0) {
+            killIterator(it);
             return 1;
         }
     }
+    killIterator(it);
     return 0;
 }
 
-int select_topic(Hash* topics_hash, char *temp_topic, int short_cmmd) {
-    if (short_cmmd) {
+int select_topic(List* topics, Hash* topics_hash, char *temp_topic, int short_cmmd) {
+    Iterator *it = createIterator(topics);
+    if (short_cmmd) {      //temp_topic is a number
         int len = strlen(temp_topic);
         for (int i = 0; i < len; i++) {
-            if (temp_topic[i] > '9' || temp_topic[i] < 0)
+            if (temp_topic[i] > '9' || temp_topic[i] < 0) {
+                killIterator(it);
                 return 0;
-            i++;
+            }
         }
 
-        if (atoi(temp_topic) < n_topics) {
+        if (atoi(temp_topic) <= n_topics) {
             topic_number = atoi(temp_topic);
 
             question_number = -1;
-            free(question);
             question = NULL;
-            // TODO set topic according to its number
+
+            int n = 1;
+            while (n < topic_number) {
+                next(it);
+                n++;
+            }
+            topic = getTopicTitle(current(next(it)));
+            killIterator(it);
             return 1;
         }
+
+        killIterator(it);
         return 0;
     }
-    else {
+    else {      // temp_topic is a title 
         if (topic_exists(topics_hash, temp_topic)) {
-            if (topic != NULL) free(topic);
-            topic = strdup(temp_topic);
+            int n = 0;
+            char *title;
+            while(hasNext(it)) {
+                n++;
+                title = getTopicTitle(current(next(it))); 
+                if (strcmp(temp_topic, title) == 0) 
+                    break;   
+            }
+
+            topic_number = n;
+            topic = title;
             question_number = -1;
-            free(question);
             question = NULL;
-            // TODO set topic_number according to its name
+
+            killIterator(it);
             return 1;
         }
+
+        killIterator(it);
+        return 0;
     }
-    return 0;
 }
 
 int receive_RGR(char* answer) {
@@ -318,7 +343,6 @@ void update_topic_list(List* topics, Hash *topics_hash, char* answer) {
             int id = atoi(stringID);
             if (!topic_exists(topics_hash, title)) {
                 Topic *new = createTopic(title, id);
-                printf("insertInTable\n");
                 insertInTable(topics_hash, new, hash(title));
                 addEl(topics, new);
             }
@@ -326,6 +350,17 @@ void update_topic_list(List* topics, Hash *topics_hash, char* answer) {
 
         print_topic_list(topics);
     }
+}
+
+void freeTopics(List *topics) {
+    Iterator *it = createIterator(topics);
+
+    while(hasNext(it)) {
+        deleteTopic(current(next(it)));
+    }
+
+    free(topics);
+    killIterator(it);
 }
 
 void getExtension(char * image, char * ext) {
@@ -345,7 +380,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
     char answer[1024];
     int tl_available = FALSE;
     List *topics = newList();
-    Hash *topics_hash = createTable(1024, sizeof(List*));
+    Hash *topics_hash = createTable(1024, sizeof(List));
 
     int fd_tcp; 
     struct addrinfo *res_tcp;
@@ -354,6 +389,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
         bzero(answer, 1024);
         fgets(buffer, 1024, stdin);
         token = strtok(buffer, " ");
+        printf("command = %s\n", token);
 
         if (strcmp(token, "reg") == 0 || strcmp(token, "register") == 0) {
             token = strtok(NULL, " ");
@@ -371,7 +407,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 }
 
                 n = recvfrom(fd_udp, answer, 1024, 0, res_udp->ai_addr, &res_udp->ai_addrlen);
-                printf("%s", answer);
+                //printf("%s", answer);
                 user_exists = 1; //depende da resposta do server
 
                 if (!receive_RGR(answer)) {
@@ -394,9 +430,9 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             }
 
             n = recvfrom(fd_udp, answer, 1024, 0, res_udp->ai_addr, &res_udp->ai_addrlen);
-            printf("%s\n", answer);
+            //printf("%s\n", answer);
 
-            // TODO validar protocolo de LTR
+            // TODO validar protocolo de LTR ?
 
             update_topic_list(topics, topics_hash, answer);
 
@@ -409,7 +445,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 token = strtok(NULL, " ");
                 char *temp_topic = strdup(token);
 
-                if (!select_topic(topics_hash, temp_topic, short_cmmd)) {
+                if (!select_topic(topics, topics_hash, temp_topic, short_cmmd)) {
                     printf("Invalid topic selected.\n");
                 }
 
@@ -595,6 +631,8 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
         }
 
         else if (strcmp(token, "exit\n") == 0) {
+            deleteTable(topics_hash);
+            freeTopics(topics);
             printf("Goodbye!\n");
             break;
         }
