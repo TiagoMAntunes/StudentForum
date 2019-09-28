@@ -21,7 +21,7 @@
 #define ERR_LEN     4
 
 int topic_number = -1, question_number = -1;
-int n_topics = 0;     // TODO ir atualizando
+int n_topics = 0;     
 char *topic = "teste";
 char *question = NULL;
 
@@ -83,12 +83,19 @@ int verify_ID(char *stringID) {
 
 }
 
-int topic_exists(char *topic) {
-    // TODO falta guardar a lista de topicos
-    return 1;
+int topic_exists(Hash* topics_hash, char *topic) { 
+    List* h =  findInTable(topics_hash, hash(topic));
+    Iterator *it = createIterator(h);
+
+    while (hasNext(it)) {
+        if (strcmp(getTopicTitle(current(next(it))), topic) == 0) {
+            return 1;
+        }
+    }
+    return 0;
 }
 
-int select_topic(char *temp_topic, int short_cmmd) {
+int select_topic(Hash* topics_hash, char *temp_topic, int short_cmmd) {
     if (short_cmmd) {
         int len = strlen(temp_topic);
         for (int i = 0; i < len; i++) {
@@ -109,7 +116,7 @@ int select_topic(char *temp_topic, int short_cmmd) {
         return 0;
     }
     else {
-        if (topic_exists(temp_topic)) {
+        if (topic_exists(topics_hash, temp_topic)) {
             if (topic != NULL) free(topic);
             topic = strdup(temp_topic);
             question_number = -1;
@@ -182,7 +189,6 @@ int read_TCP(int fd, char** full_msg, int msg_size){
     
     return msg_size;
 }
-
 
 void write_TCP(int fd, char* reply, int msg_size){
     int n;
@@ -297,7 +303,7 @@ void print_topic_list(List *topics) {
     }
 }
 
-void update_topic_list(List* topics,char* answer) {
+void update_topic_list(List* topics, Hash *topics_hash, char* answer) {
 
     char *token = strtok(answer, " \n");  // LTR
     token = strtok(NULL, " ");  //N
@@ -310,9 +316,12 @@ void update_topic_list(List* topics,char* answer) {
             char* title = strtok(NULL, ":");
             char *stringID = strtok(NULL, " ");
             int id = atoi(stringID);
-            // TODO verificar se o topico ja existe antes de adicionar
-            Topic *new = createTopic(title, id);
-            addEl(topics, new);
+            if (!topic_exists(topics_hash, title)) {
+                Topic *new = createTopic(title, id);
+                printf("insertInTable\n");
+                insertInTable(topics_hash, new, hash(title));
+                addEl(topics, new);
+            }
         }
 
         print_topic_list(topics);
@@ -336,6 +345,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
     char answer[1024];
     int tl_available = FALSE;
     List *topics = newList();
+    Hash *topics_hash = createTable(1024, sizeof(List*));
 
     int fd_tcp; 
     struct addrinfo *res_tcp;
@@ -388,7 +398,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
             // TODO validar protocolo de LTR
 
-            update_topic_list(topics, answer);
+            update_topic_list(topics, topics_hash, answer);
 
             free(message);  
         }
@@ -399,7 +409,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 token = strtok(NULL, " ");
                 char *temp_topic = strdup(token);
 
-                if (!select_topic(temp_topic, short_cmmd)) {
+                if (!select_topic(topics_hash, temp_topic, short_cmmd)) {
                     printf("Invalid topic selected.\n");
                 }
 
