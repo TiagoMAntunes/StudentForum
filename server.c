@@ -171,7 +171,7 @@ int read_TCP(int fd, char** full_msg, int msg_size, int current_offset){
         *full_msg = realloc(*full_msg, msg_size);
         n += c;
     }
-    
+    (*full_msg)[n-1] = '\0';
     return msg_size;
 }
 
@@ -249,6 +249,7 @@ int ndigits(int i){
 
 void TCP_input_validation(int fd, char * message, int msg_size) {
     char * token, * prefix;
+    printf("Message inside: %s\n", message);
     token = strtok(message, " ");
     prefix = strdup(token);
 
@@ -316,8 +317,21 @@ void TCP_input_validation(int fd, char * message, int msg_size) {
         free(qdata);
         free(ext);
         free(img_data);
+    } else if(strcmp("GQU", prefix) == 0) {
+        char * topic, * question;
+        token = strtok(NULL, " ");
+        topic = strdup(token);
+
+        token = strtok(NULL, " ");
+        
+        int j = strlen(token);
+        if (token[j-1] == '\n') token[j-1] = '\0';
+        question = strdup(token);
+
+        //do stuff
+
     }
-    
+
     free(prefix);
 }
 
@@ -361,6 +375,7 @@ int main(int argc, char *argv[])
 
         if (FD_ISSET(fd_tcp, &set)) {
             printf("Receiving from TCP client.\n");
+            user_addrlen = sizeof(user_addr);
             if ((newfd = accept(fd_tcp, (struct sockaddr *)&user_addr, &user_addrlen)) == -1)
                 exit(ERROR);
 
@@ -375,7 +390,7 @@ int main(int argc, char *argv[])
                     //write(newfd, "Oi babyyy\n", 11);
                     
                     int msg_size = MAX_REQ_LEN;
-                    char * message = malloc(sizeof(char) * msg_size);
+                    char * message = calloc(msg_size, sizeof(char));
                     int reply_len;
 
                     msg_size = read_TCP(newfd, &message, msg_size, 0);
