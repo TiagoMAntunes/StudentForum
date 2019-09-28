@@ -364,7 +364,7 @@ void update_question_list(Hash * topics_hash, char *answer) {
     
     List *topic_list = findInTable(topics_hash, hash(topic));
     Topic *current_topic;
-    Iterator *it = createIterator(it);
+    Iterator *it = createIterator(topic_list);
     while (hasNext(it)) {
         current_topic = current(next(it));
         if (strcmp(getTopicTitle(current_topic), topic) == 0) 
