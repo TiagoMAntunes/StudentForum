@@ -2,10 +2,11 @@
 #include <stdio.h>
 #include "file_management.h"
 #include <string.h>
-
+#include "list.h"
 #include <sys/stat.h>
 #include <unistd.h>
 #include <errno.h>
+#include <dirent.h>
 
 #define PREFIX "./topics/"
 #define PREFIX_LEN 9
@@ -60,4 +61,27 @@ void createAnswer(Topic * topic, char * question, char * text, char * image) {
 }
 void getAnswer(Topic * topic, char * question, int id) {
 
+}
+
+List * getTopicQuestions(char * topic, int * list_size) {
+    struct dirent * de;
+    char * dir_name = calloc(PREFIX_LEN + strlen(topic) + 1, sizeof(char));
+    sprintf(dir_name, "%s%s", PREFIX, topic);
+    printf("Opening: %s\n", dir_name);
+    DIR * dir = opendir(dir_name);
+
+    if (dir == NULL) return NULL;
+
+    //Create return list
+    List * list = newList();
+    *list_size = 0;
+    while((de = readdir(dir)) != NULL)
+        if (!strstr(de->d_name, ".") && !strstr(de->d_name, "..")) {
+                printf("Found Question: %s\n", de->d_name);
+                (*list_size)++;
+                addEl(list, strdup(de->d_name));
+            }
+
+    closedir(dir);
+    return list;
 }

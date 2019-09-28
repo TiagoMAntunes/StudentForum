@@ -454,10 +454,45 @@ int main(int argc, char *argv[])
             
             } else if (strcmp(token, "LQU") == 0) {
                 if (validate_LQU(to_validate)) {
+                    token = strtok(to_token, " ");
+                    token = strtok(NULL, " ");
+                    
+                    //remove \n
+                    int j = strlen(token);
+                    if (token[j-1] == '\n') token[j-1] = '\0';
+                    
+                    //get list of topic questions
+                    List * questions_list = getTopicQuestions(token, &j);
 
-                
+                    //Create message data
+                    char * message = calloc(7 + ndigits(j) + j * (10 + 1 + 5 + 1 + 2), sizeof(char));
+                    char * msg_help = message;
 
-                    n = sendto(fd_udp, "LQR 5 (question:userID:NA )\n", 28, 0, (struct sockaddr *) &user_addr, user_addrlen);
+                    //LQR N
+                    memcpy(msg_help, "LQR ", 4);
+                    msg_help += 4;
+                    sprintf(msg_help, "%d ", j);
+                    msg_help += ndigits(j) + 1;
+                    
+                    //populate with the amount of questions
+                    Iterator * it = createIterator(questions_list);
+                    while (j > 0) {
+                        char * question = (char * ) current(next(it));
+                        sprintf(msg_help, "%s:%s:%s ", question, "12345", "NA");
+                        msg_help += 10 + strlen(question);
+                        j--;
+                        free(question);
+                    }
+
+                    //Finish string
+                    *msg_help = '\n';
+                    *(++msg_help) = 0;
+
+                    n = sendto(fd_udp, message, strlen(message), 0, (struct sockaddr *) &user_addr, user_addrlen);
+
+                    killIterator(it);
+                    listFree(questions_list);
+
                 }
                 else {
                     send_ERR_MSG_UDP(fd_udp, &res_udp);
