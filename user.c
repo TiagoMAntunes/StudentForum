@@ -202,14 +202,20 @@ int receive_PTR(char* answer) {
     return 1;
 }
 
-int read_TCP(int fd, char** full_msg, int msg_size){
-    int n = read(fd, *full_msg, msg_size);
-    
-    while((*full_msg)[n-2] != '\n') {
+int read_TCP(int fd, char** full_msg, int msg_size, int current_offset){
+    int n = read(fd, *full_msg + current_offset, msg_size - current_offset);
+    int c;
+    if (n == 0) return msg_size;
+    if (n == msg_size) {
         msg_size *= 2;
         *full_msg = realloc(*full_msg, msg_size);
-        n += read(fd, *full_msg + n, msg_size - n);
-        
+    }
+    while( (c = read(fd, *full_msg + n + current_offset, msg_size - current_offset - n)) != 0) {
+        //printf("Value of c: %d\n", c);
+        if (c + n >= msg_size)
+            msg_size *= 2;
+        *full_msg = realloc(*full_msg, msg_size);
+        n += c;
     }
     
     return msg_size;
