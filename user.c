@@ -509,6 +509,9 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     send_ERR_MSG_UDP(fd_udp, &res_udp);
                 }
 
+                else
+                    tl_available = FALSE; //prevents user from selecting topics from a non updated list
+                
                 free(message);
             }
             else
@@ -600,7 +603,6 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 i = strlen(text_file) - 1;
                 text_file[i] = '\0';
             }
-            //strcat(text_file, ext_txt); add '.txt'
 
             qsize = get_filesize(text_file);
             qdata = (char*) malloc (sizeof(char) * qsize + 1);
@@ -644,18 +646,58 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
         else if (strcmp(token, "answer_submit") == 0 || strcmp(token, "as") == 0) {
             char * text_file, * image_file = NULL, * message;
-            int msg_size;
-            char qIMG; //flag
+            char *adata, *idata;
+            int msg_size, asize, isize, i;
+            int qIMG; //flag
+
             token = strtok(NULL, " ");
             text_file = strdup(token);
             token = strtok(NULL, " ");
-            if ((qIMG = token != NULL))
-                image_file = strdup(token);
 
-            msg_size = 15 + strlen(topic)  /* + size of txt file in bytes  + txt file data*/ + qIMG;
-            
-            message = malloc(sizeof(char) * msg_size);
-            sprintf(message, "ANS %d %s %d\n", userID, topic, /* qsize, qdata, */ qIMG );
+            printf("curr topic: %s curr question: %s\n", topic, question);
+
+            if ((qIMG = token != NULL)){
+                image_file = strdup(token);
+                i = strlen(image_file) - 1;
+                if (image_file[i] == '\n')
+                    image_file[i] = '\0';  
+                printf("image file is: %s\n", image_file);
+            }
+
+            else{//tirar o \n
+                i = strlen(text_file) - 1;
+                text_file[i] = '\0';
+            }
+
+            asize = get_filesize(text_file);
+            adata = (char*) malloc (sizeof(char) * asize + 1);
+
+            get_txtfile(text_file, adata, asize);
+
+            if(qIMG) {
+                isize = get_filesize(image_file);
+                idata = (char*) malloc (sizeof(char) * (isize));
+                char ext[4];
+
+                getExtension(image_file, ext);
+                get_img(image_file, idata, isize);
+
+                msg_size = 21 + ndigits(userID) + strlen(topic) + strlen(question) + ndigits(asize) + asize + ndigits(qIMG) + ndigits(isize) + isize;
+
+                message = calloc(msg_size,sizeof(char));
+                n = sprintf(message, "QUS %d %s %s %d %s %d %s %d ", userID, topic, question, asize, adata, qIMG, ext,isize);
+                memcpy(message + n, idata, isize); //copy image to message
+                printf("Image size: %d\n", isize);
+                message[msg_size-2] = '\n';
+                message[msg_size-1] = '\0'; //acho q isto n e preciso?
+            }
+
+            else{
+                msg_size = 17 + strlen(topic) + strlen(question) + ndigits(asize) + asize;
+                
+                message = malloc(sizeof(char) * (msg_size));
+                sprintf(message, "QUS %d %s %s %d %s 0\n", userID, topic, question, asize, adata, qIMG);
+            }
             
             fd_tcp = create_TCP(hostname,  &res_tcp);
             n = connect(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
