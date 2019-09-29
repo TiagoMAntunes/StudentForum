@@ -121,8 +121,21 @@ void createAnswer(char * topic, char * question, char * text, int text_size, cha
     free(dir);
 }
 
-void getAnswer(Topic * topic, char * question, int id) {
+struct dirent ** getAnswers(char * topic, char * question, int id) {
+    int n;
+    struct dirent ** namelist;
+    char * dir_name = calloc(PREFIX_LEN + strlen(topic) + 1 + strlen(question) + 2, sizeof(char));
+    sprintf(dir_name, "%s%s/%s/", PREFIX, topic, question);
+    n = scandir(dir_name, &namelist, NULL, alphasort);
+    if (n == -1) {
+        perror("Error in scandir");
+        exit(EXIT_FAILURE);
+    }
 
+    while (n--)
+        printf("%s\n", namelist[n]->d_name);
+        
+    return namelist;
 }
 
 List * getTopicQuestions(char * topic, int * list_size) {

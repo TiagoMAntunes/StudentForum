@@ -9,7 +9,7 @@ FILE * getQuestionText(Topic * topic, char * question);
 FILE * getQuestionImage(Topic * topic, char * question);
 void createQuestion(char * topic, char * question, char * text, int text_size, char * image, int image_size, char * ext);
 void createAnswer(char * topic, char * question, char * text, int text_size, char * image, int image_size, char * ext);
-void getAnswer(Topic * topic, char * question, int id); //change return value later
+struct dirent ** getAnswers(char * topic, char * question, int id); //change return value later
 List * getTopicQuestions(char * dir_name, int* list_size);
 
 
