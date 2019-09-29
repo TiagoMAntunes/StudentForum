@@ -27,6 +27,7 @@ int n_topics = 0;
 char *topic = NULL;
 char *question = NULL;
 
+List * questions_titles;
 
 int userID;
 
@@ -331,6 +332,7 @@ void print_topic_list(List *topics) {
         int id = getTopicID(current(topic));
         printf("%d - %s (%d)\n", n++, title, id);
     }
+    killIterator(it);
 }
 
 void update_topic_list(List* topics, Hash *topics_hash, char* answer) {
@@ -380,7 +382,15 @@ void update_question_list(Hash * topics_hash, char *answer) {
 
     printf("Topic : %s -> Questions:\n", topic);
 
-    //display the questions available for the topic
+    if (questions_titles != NULL) {
+        Iterator * it = createIterator(questions_titles);
+        while (hasNext(it)) free(current(next(it)));
+        killIterator(it);
+        listFree(questions_titles);
+    }
+
+    questions_titles = newList();
+    //display the questions available for the topic and save them
     int n = 0;
     while ((token = strtok(NULL, " ")) != NULL) {
         char question[11], userID[6];
@@ -405,7 +415,7 @@ void update_question_list(Hash * topics_hash, char *answer) {
         N = atoi(token);
 
         printf("%d - %s (%d)\n", ++n, question, userID);
-
+        addEl(questions_titles, strdup(question));
     }
 
 }
@@ -439,7 +449,6 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
     int tl_available = FALSE;
     List *topics = newList();
     Hash *topics_hash = createTable(1024, sizeof(List));
-
     int fd_tcp; 
     struct addrinfo *res_tcp;
     while (1) {
