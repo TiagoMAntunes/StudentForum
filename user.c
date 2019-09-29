@@ -600,15 +600,16 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 while (n-- > 0) helper = current(next(it));
                 strcpy(question_title, helper);
                 killIterator(it);
+                //TODO: VALIDATE INPUT NUMBER
             }
             else
                 strcpy(question_title, token);
-
+            question = strdup(question_title);
             printf("Question is: %s\n", question_title);
             
-            int msg_size = strlen(question_title) + strlen(topic) + 5;
+            int msg_size = strlen(question_title) + strlen(topic) + 7;
             char * message = malloc(sizeof(char) * (msg_size+1));
-            sprintf(message, "GQU %s %s", topic, question_title);
+            sprintf(message, "GQU %s %s\n", topic, question_title);
             fd_tcp = create_TCP(hostname,  &res_tcp);
             n = connect(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
             if (n == -1) exit(1);

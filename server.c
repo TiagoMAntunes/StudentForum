@@ -250,6 +250,7 @@ int ndigits(int i){
 void TCP_input_validation(int fd, char * message, int msg_size) {
     char * token, * prefix;
     printf("Message inside: %s\n", message);
+    printf("Size of message: %d\n", msg_size);
     token = strtok(message, " ");
     prefix = strdup(token);
 
@@ -330,7 +331,72 @@ void TCP_input_validation(int fd, char * message, int msg_size) {
 
         //do stuff
 
-    }
+    } else if (strcmp("ANS", prefix) == 0) {
+        char * userID, * topic, *question, *adata, *ext, *img_data;
+        int asize, aIMG, isize;
+
+        token = strtok(NULL, " ");
+        userID = strdup(token);
+
+        token = strtok(NULL, " ");
+        topic = strdup(token);
+
+        token = strtok(NULL, " ");
+        question = strdup(token);
+
+        token = strtok(NULL, " ");
+        asize = atoi(token);
+
+
+        //manually copy
+        token += ndigits(asize) + 1;
+        if (msg_size < asize - (token - message)) {
+            printf("---------- QSIZE REALLOC ----------\n");
+            int offset = token - message;
+            msg_size = read_TCP(fd, &message, msg_size, offset);
+            token = message + offset;
+            printf("-----------NEW MESSAGE-------- \n");
+            write(1, message, msg_size);
+            printf("\nEND-----------------\n");
+        }
+        adata = calloc(asize, sizeof(char));
+        memcpy(adata, token, asize);
+
+        //strtok after skipping
+        token += asize + 1;
+        token = strtok(token , " ");
+        aIMG = atoi(token);
+
+        token = strtok(NULL, " ");
+        ext = strdup(token);
+
+        token = strtok(NULL, " ");
+        isize = atoi(token);
+
+
+        //reposition to avoid destroying data
+        token += ndigits(isize)+1;
+        img_data = calloc(isize, sizeof(char));
+        if (msg_size < isize - (token - message)) {
+            printf("---------- ISIZE REALLOC ----------\n");
+            int offset = token - message;
+            msg_size = read_TCP(fd, &message, msg_size, offset);
+            token = message + offset;
+            printf("-----------NEW MESSAGE-------- \n");
+            write(1, message, msg_size);
+            printf("\nEND-----------------\n");
+        }
+        memcpy(img_data, token, isize);
+
+        createAnswer(topic, question, adata, asize,img_data, isize, ext);
+
+        free(topic);
+        free(question);
+        free(userID);
+        free(adata);
+        free(ext);
+        free(img_data);
+    } 
 
     free(prefix);
 }

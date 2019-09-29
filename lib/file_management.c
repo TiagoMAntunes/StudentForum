@@ -60,9 +60,47 @@ void createQuestion(char * topic, char * question, char * text, int text_size, c
     free(dir);
 }
 
-void createAnswer(Topic * topic, char * question, char * text, char * image) {
+void createAnswer(char * topic, char * question, char * text, int text_size, char * image, int image_size, char * ext) {
+    char * file_text = calloc(PREFIX_LEN + strlen(topic) + 1 + strlen(question) * 2 + 5+ strlen("answer.") + EXT_LEN + 1, sizeof(char));
+    char * file_img = calloc(PREFIX_LEN + strlen(topic) + 1 + strlen(question) * 2 + 5 + strlen("image.") + EXT_LEN + 1, sizeof(char));
+    char * dir = calloc(PREFIX_LEN + strlen(topic) + 1 + strlen(question) * 2 + 5 + 1,sizeof(char));
+    sprintf(file_text, "%s%s/%s/%s_01/answer.txt", PREFIX, topic, question, question);
+    sprintf(file_img, "%s%s/%s/%s_01/image.%s", PREFIX, topic, question, question, ext);
+    sprintf(dir, "%s%s/%s/%s_01/", PREFIX, topic, question);
+    printf("%s\n%s\n", file_text, file_img);
+    
+    struct stat sb;
 
+    printf("Checking directory %s\n", dir);
+    if (stat(dir, &sb) == -1) {
+        printf("Directories missing. Creating...\n");
+      
+        int check = mkdir(PREFIX, 0700);
+
+        sprintf(dir, "%s%s/", PREFIX, topic);
+        check = mkdir(dir, 0700);
+      
+        sprintf(dir, "%s%s/%s/", PREFIX, topic, question);
+        check = mkdir(dir, 0700);
+
+        sprintf(dir, "%s%s/%s/%s_01/", PREFIX, topic, question, question);
+        check = mkdir(dir, 0700);
+    }
+        
+
+    FILE * f = fopen(file_text, "w+");
+    fwrite(text, sizeof(char), text_size, f);
+    fclose(f);
+    
+    f = fopen(file_img, "w+");
+    fwrite(image, sizeof(char), image_size, f);
+    fclose(f);
+
+    free(file_text);
+    free(file_img);
+    free(dir);
 }
+
 void getAnswer(Topic * topic, char * question, int id) {
 
 }
