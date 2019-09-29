@@ -328,8 +328,8 @@ void TCP_input_validation(int fd, char * message, int msg_size) {
         int j = strlen(token);
         if (token[j-1] == '\n') token[j-1] = '\0';
         question = strdup(token);
-
-        //do stuff
+        
+        getAnswers(topic, question);
 
     } else if (strcmp("ANS", prefix) == 0) {
         char * userID, * topic, *question, *adata, *ext, *img_data;

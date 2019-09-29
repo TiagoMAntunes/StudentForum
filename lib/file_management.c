@@ -121,7 +121,7 @@ void createAnswer(char * topic, char * question, char * text, int text_size, cha
     free(dir);
 }
 
-struct dirent ** getAnswers(char * topic, char * question, int id) {
+struct dirent ** getAnswers(char * topic, char * question) {
     int n;
     struct dirent ** namelist;
     char * dir_name = calloc(PREFIX_LEN + strlen(topic) + 1 + strlen(question) + 2, sizeof(char));
