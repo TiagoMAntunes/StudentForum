@@ -28,6 +28,7 @@ char *topic = NULL;
 char *question = NULL;
 
 List * questions_titles;
+int n_questions = 0;
 
 int userID;
 
@@ -362,7 +363,7 @@ void update_topic_list(List* topics, Hash *topics_hash, char* answer) {
 void update_question_list(Hash * topics_hash, char *answer) {
     char *token = strtok(answer, " ");    // LQU
     token = strtok(NULL, " ");  // N
-    int n_questions = atoi(token);
+    n_questions = atoi(token);
     
     List *topic_list = findInTable(topics_hash, hash(topic));
     Topic *current_topic;
@@ -593,11 +594,17 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             token = strtok(NULL, " ");
 
             if(short_cmmd){
-                //TODO get question title from question list, by number
+                int n = n_questions - atoi(token) + 1;
+                Iterator * it = createIterator(questions_titles);
+                char * helper;
+                while (n-- > 0) helper = current(next(it));
+                strcpy(question_title, helper);
+                killIterator(it);
             }
-
             else
                 strcpy(question_title, token);
+
+            printf("Question is: %s\n", question_title);
             
             int msg_size = strlen(question_title) + strlen(topic) + 5;
             char * message = malloc(sizeof(char) * (msg_size+1));
