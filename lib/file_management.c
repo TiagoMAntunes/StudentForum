@@ -60,13 +60,33 @@ void createQuestion(char * topic, char * question, char * text, int text_size, c
     free(dir);
 }
 
+int getNumberOfAnswers(char * topic, char * question) {
+    char * dir = calloc(PREFIX_LEN + strlen(topic) + 1 + strlen(question) + 2, sizeof(char));
+    sprintf(dir, "%s%s/%s/", PREFIX, topic, question);
+    int n_files = 0;
+    DIR * dirp;
+    struct dirent * entry;
+
+    dirp = opendir(dir);
+    while ((entry = readdir(dirp)) != NULL)
+        if (entry->d_type == DT_DIR && strcmp(entry->d_name, ".") && strcmp(entry->d_name, ".."))
+            n_files++;
+
+    free(dir);
+    closedir(dirp);
+    return n_files;
+}
+
 void createAnswer(char * topic, char * question, char * text, int text_size, char * image, int image_size, char * ext) {
+
+    int answer_number = getNumberOfAnswers(topic, question) + 1;
+
     char * file_text = calloc(PREFIX_LEN + strlen(topic) + 1 + strlen(question) * 2 + 5+ strlen("answer.") + EXT_LEN + 1, sizeof(char));
     char * file_img = calloc(PREFIX_LEN + strlen(topic) + 1 + strlen(question) * 2 + 5 + strlen("image.") + EXT_LEN + 1, sizeof(char));
     char * dir = calloc(PREFIX_LEN + strlen(topic) + 1 + strlen(question) * 2 + 5 + 1,sizeof(char));
-    sprintf(file_text, "%s%s/%s/%s_01/answer.txt", PREFIX, topic, question, question);
-    sprintf(file_img, "%s%s/%s/%s_01/image.%s", PREFIX, topic, question, question, ext);
-    sprintf(dir, "%s%s/%s/%s_01/", PREFIX, topic, question);
+    sprintf(file_text, "%s%s/%s/%s_%02d/answer.txt", PREFIX, topic, question, question, answer_number);
+    sprintf(file_img, "%s%s/%s/%s_%02d/image.%s", PREFIX, topic, question, question, answer_number, ext);
+    sprintf(dir, "%s%s/%s/%s_%02d/", PREFIX, topic, question, question, answer_number);
     printf("%s\n%s\n", file_text, file_img);
     
     struct stat sb;
@@ -83,7 +103,7 @@ void createAnswer(char * topic, char * question, char * text, int text_size, cha
         sprintf(dir, "%s%s/%s/", PREFIX, topic, question);
         check = mkdir(dir, 0700);
 
-        sprintf(dir, "%s%s/%s/%s_01/", PREFIX, topic, question, question);
+        sprintf(dir, "%s%s/%s/%s_%02d/", PREFIX, topic, question, question, answer_number);
         check = mkdir(dir, 0700);
     }
         
