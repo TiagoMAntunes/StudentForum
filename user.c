@@ -371,16 +371,42 @@ void update_question_list(Hash * topics_hash, char *answer) {
             break;
     }
 
-    if (n_questions > 0) {
-        printf("Topic : %s -> Questions:\n", topic);
-        printTopicQuestions(current_topic);
-    }  
-
-    else {
+    killIterator(it);
+        
+    if (n_questions <= 0) {
         printf("Topic \"%s\" has no questions available.\n");
+        return;
     }
 
-    killIterator(it);
+    printf("Topic : %s -> Questions:\n", topic);
+
+    //display the questions available for the topic
+    int n = 0;
+    while ((token = strtok(NULL, " ")) != NULL) {
+        char question[11], userID[6];
+        int N;
+        int i = 0;
+        while (token[i] != ':') {
+            question[i] = token[i];
+            i++;
+        }
+        
+        token += i+1;
+        question[i] = 0;
+        i = 0;
+
+        while (token[i] != ':') {
+            userID[i] = token[i];
+            i++;
+        }
+
+        token += i+1;
+        userID[i] = 0;
+        N = atoi(token);
+
+        printf("%d - %s (%d)\n", ++n, question, userID);
+
+    }
 
 }
 
@@ -535,6 +561,9 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
                 n = recvfrom(fd_udp, answer, 1024, 0, res_udp->ai_addr, &res_udp->ai_addrlen);
                 printf("%s\n", answer);
+
+                int j = strlen(answer);
+                if (answer[j-1] == '\n') answer[j-1] = '\0';
 
                 // TODO LQU protocol validation?
                 update_question_list(topics_hash, answer);
