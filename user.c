@@ -685,7 +685,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 msg_size = 21 + ndigits(userID) + strlen(topic) + strlen(question) + ndigits(asize) + asize + ndigits(qIMG) + ndigits(isize) + isize;
 
                 message = calloc(msg_size,sizeof(char));
-                n = sprintf(message, "QUS %d %s %s %d %s %d %s %d ", userID, topic, question, asize, adata, qIMG, ext,isize);
+                n = sprintf(message, "ANS %d %s %s %d %s %d %s %d ", userID, topic, question, asize, adata, qIMG, ext,isize);
                 memcpy(message + n, idata, isize); //copy image to message
                 printf("Image size: %d\n", isize);
                 message[msg_size-2] = '\n';
@@ -696,7 +696,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 msg_size = 17 + strlen(topic) + strlen(question) + ndigits(asize) + asize;
                 
                 message = malloc(sizeof(char) * (msg_size));
-                sprintf(message, "QUS %d %s %s %d %s 0\n", userID, topic, question, asize, adata, qIMG);
+                sprintf(message, "ANS %d %s %s %d %s 0\n", userID, topic, question, asize, adata, qIMG);
             }
             
             fd_tcp = create_TCP(hostname,  &res_tcp);
