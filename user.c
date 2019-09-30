@@ -132,13 +132,14 @@ int select_topic(List* topics, Hash* topics_hash, char *temp_topic, int short_cm
         return 0;
     }
     else {      // temp_topic is a title 
-        if (topic_exists(topics_hash, temp_topic)) {
+        char *temp_title = strtok(temp_topic, " \n");
+        if (topic_exists(topics_hash, temp_title)) {
             int n = 0;
             char *title;
             while(hasNext(it)) {
                 n++;
                 title = getTopicTitle(current(next(it))); 
-                if (strcmp(temp_topic, title) == 0) 
+                if (strcmp(temp_title, title) == 0) 
                     break;   
             }
 
@@ -557,7 +558,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
         }
 
-        else if (user_exists && (strcmp(token, "question_list\n") == 0|| strcmp(token, "ql\n")) == 0) {
+        else if (user_exists && (strcmp(token, "question_list") == 0|| strcmp(token, "ql\n")) == 0) {
             if (topic != NULL) {
                 char * message;
                 int topic_len = strlen(topic);

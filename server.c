@@ -584,13 +584,18 @@ int main(int argc, char *argv[])
                     msg_help += ndigits(j) + 1;
                     
                     //populate with the amount of questions
-                    Iterator * it = createIterator(questions_list);
-                    while (j > 0) {
-                        char * question = (char * ) current(next(it));
-                        sprintf(msg_help, "%s:%s:%s ", question, "12345", "NA");
-                        msg_help += 10 + strlen(question);
-                        j--;
-                        free(question);
+                    if (questions_list != NULL) {
+                        Iterator * it = createIterator(questions_list);
+                        while (j > 0) {
+                            char * question = (char * ) current(next(it));
+                            sprintf(msg_help, "%s:%s:%s ", question, "12345", "NA");
+                            msg_help += 10 + strlen(question);
+                            j--;
+                            free(question);
+                        }
+                        killIterator(it);
+                        listFree(questions_list);
+
                     }
 
                     //Finish string
@@ -598,9 +603,6 @@ int main(int argc, char *argv[])
                     *(++msg_help) = 0;
 
                     n = sendto(fd_udp, message, strlen(message), 0, (struct sockaddr *) &user_addr, user_addrlen);
-
-                    killIterator(it);
-                    listFree(questions_list);
 
                 }
                 else {
