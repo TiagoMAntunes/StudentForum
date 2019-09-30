@@ -329,7 +329,14 @@ void TCP_input_validation(int fd, char * message, int msg_size) {
         if (token[j-1] == '\n') token[j-1] = '\0';
         question = strdup(token);
         
-        getAnswers(topic, question);
+        List * answers = getAnswers(topic, question);
+
+        Iterator * it = createIterator(answers);
+        printf("Available answers:\n");
+        while (hasNext(it))
+            printf("%s\n", current(next(it)));
+
+        
 
     } else if (strcmp("ANS", prefix) == 0) {
         char * userID, * topic, *question, *adata, *ext, *img_data;

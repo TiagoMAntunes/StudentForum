@@ -121,7 +121,7 @@ void createAnswer(char * topic, char * question, char * text, int text_size, cha
     free(dir);
 }
 
-struct dirent ** getAnswers(char * topic, char * question) {
+List * getAnswers(char * topic, char * question) {
     int n;
     struct dirent ** namelist;
     char * dir_name = calloc(PREFIX_LEN + strlen(topic) + 1 + strlen(question) + 2, sizeof(char));
@@ -132,10 +132,14 @@ struct dirent ** getAnswers(char * topic, char * question) {
         exit(EXIT_FAILURE);
     }
 
-    while (n--)
-        printf("%s\n", namelist[n]->d_name);
-        
-    return namelist;
+    List * res = newList();
+
+    while (n--) 
+        if (namelist[n]->d_type == DT_DIR && strcmp(namelist[n]->d_name, ".") && strcmp(namelist[n]->d_name, ".."))
+            addEl(res, strdup(namelist[n]->d_name));
+
+    free(namelist);
+    return res;
 }
 
 List * getTopicQuestions(char * topic, int * list_size) {
