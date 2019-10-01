@@ -14,12 +14,60 @@
 #define IMAGE_LEN 6
 #define EXT_LEN 3
 
+#define MIN(A,B) ((A) < (B) ? (A) : (B))
+
 FILE * getQuestionText(Topic * topic, char * question) {
     return NULL;
 }
 
 FILE * getQuestionImage(Topic * topic, char * question) {
     return NULL;
+}
+
+void validateDirectories(char * topic, char * question) {
+    char * dir = calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 3,sizeof(char));
+    struct stat sb;
+
+    printf("Checking directory %s\n", dir);
+    if (stat(dir, &sb) == -1) {
+        printf("Directories missing. Creating...\n");
+
+        int check = mkdir(PREFIX, 0700);
+
+        sprintf(dir, "%s%s/", PREFIX, topic);
+        check = mkdir(dir, 0700);
+
+        sprintf(dir, "%s%s/%s/", PREFIX, topic, question);
+        check = mkdir(dir, 0700);
+    }
+}
+
+void writeTextFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed) {
+    char * filename = calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 3 + QUESTION_LEN , sizeof(char)); //textfilename
+    sprintf(filename, "%s%s/%s/question.txt", PREFIX, topic, question);
+    
+    writeToFile(filename, buffer, buffer_size, qsize, fd, changed);
+}
+
+void writeImageFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed, char * ext) {
+    char * filename = calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 3 + IMAGE_LEN + EXT_LEN, sizeof(char));
+    sprintf(filename, "%s%s/%s/image.%s", PREFIX, topic, question, ext);
+    
+    writeToFile(filename, buffer, buffer_size, qsize, fd, changed);
+}
+
+void writeToFile(char * filename, char * buffer, int buffer_size, int total_size, int fd, int * changed) {
+    FILE * f = fopen(filename, "w+");
+
+    while (total_size > 0) {
+        total_size -= fwrite(buffer, sizeof(char), MIN(total_size, buffer_size), f);
+        if (total_size > 0) { 
+            read(fd, buffer, MIN(buffer_size, total_size));
+            *changed = 1;
+        }
+    }
+    
+    fclose(f);
 }
 
 void createQuestion(char * topic, char * question, char * text, int text_size, char * image, int image_size, char * ext) {
