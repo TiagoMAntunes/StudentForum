@@ -30,27 +30,27 @@ void createQuestion(char * topic, char * question, char * text, int text_size, c
     sprintf(file_img, "%s%s/%s/image.%s", PREFIX, topic, question, ext);
     sprintf(dir, "%s%s/%s/", PREFIX, topic, question);
     printf("%s\n%s\n", file_text, file_img);
-    
+
     struct stat sb;
 
     printf("Checking directory %s\n", dir);
     if (stat(dir, &sb) == -1) {
         printf("Directories missing. Creating...\n");
-      
+
         int check = mkdir(PREFIX, 0700);
 
         sprintf(dir, "%s%s/", PREFIX, topic);
         check = mkdir(dir, 0700);
-      
+
         sprintf(dir, "%s%s/%s/", PREFIX, topic, question);
         check = mkdir(dir, 0700);
     }
-        
+
 
     FILE * f = fopen(file_text, "w+");
     fwrite(text, sizeof(char), text_size, f);
     fclose(f);
-    
+
     f = fopen(file_img, "w+");
     fwrite(image, sizeof(char), image_size, f);
     fclose(f);
@@ -88,30 +88,30 @@ void createAnswer(char * topic, char * question, char * text, int text_size, cha
     sprintf(file_img, "%s%s/%s/%s_%02d/image.%s", PREFIX, topic, question, question, answer_number, ext);
     sprintf(dir, "%s%s/%s/%s_%02d/", PREFIX, topic, question, question, answer_number);
     printf("%s\n%s\n", file_text, file_img);
-    
+
     struct stat sb;
 
     printf("Checking directory %s\n", dir);
     if (stat(dir, &sb) == -1) {
         printf("Directories missing. Creating...\n");
-      
+
         int check = mkdir(PREFIX, 0700);
 
         sprintf(dir, "%s%s/", PREFIX, topic);
         check = mkdir(dir, 0700);
-      
+
         sprintf(dir, "%s%s/%s/", PREFIX, topic, question);
         check = mkdir(dir, 0700);
 
         sprintf(dir, "%s%s/%s/%s_%02d/", PREFIX, topic, question, question, answer_number);
         check = mkdir(dir, 0700);
     }
-        
+
 
     FILE * f = fopen(file_text, "w+");
     fwrite(text, sizeof(char), text_size, f);
     fclose(f);
-    
+
     f = fopen(file_img, "w+");
     fwrite(image, sizeof(char), image_size, f);
     fclose(f);
@@ -134,9 +134,12 @@ List * getAnswers(char * topic, char * question) {
 
     List * res = newList();
 
-    while (n--) 
-        if (namelist[n]->d_type == DT_DIR && strcmp(namelist[n]->d_name, ".") && strcmp(namelist[n]->d_name, ".."))
-            addEl(res, strdup(namelist[n]->d_name));
+    int dir_count = 0;
+    while (n-- > 0 && dir_count < 10)
+      if (namelist[n]->d_type == DT_DIR && strcmp(namelist[n]->d_name, ".") && strcmp(namelist[n]->d_name, "..")) {
+              addEl(res, strdup(namelist[n]->d_name));
+              dir_count++;
+      }
 
     free(namelist);
     return res;

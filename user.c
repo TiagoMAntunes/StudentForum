@@ -23,7 +23,7 @@
 #define ERR_LEN     4
 
 int topic_number = -1, question_number = -1;
-int n_topics = 0;     
+int n_topics = 0;
 char *topic = NULL;
 char *question = NULL;
 
@@ -87,7 +87,7 @@ int verify_ID(char *stringID) {
 
 }
 
-int topic_exists(Hash* topics_hash, char *topic) { 
+int topic_exists(Hash* topics_hash, char *topic) {
     List* h =  findInTable(topics_hash, hash(topic));
     Iterator *it = createIterator(h);
 
@@ -131,16 +131,16 @@ int select_topic(List* topics, Hash* topics_hash, char *temp_topic, int short_cm
         killIterator(it);
         return 0;
     }
-    else {      // temp_topic is a title 
+    else {      // temp_topic is a title
         char *temp_title = strtok(temp_topic, " \n");
         if (topic_exists(topics_hash, temp_title)) {
             int n = 0;
             char *title;
             while(hasNext(it)) {
                 n++;
-                title = getTopicTitle(current(next(it))); 
-                if (strcmp(temp_title, title) == 0) 
-                    break;   
+                title = getTopicTitle(current(next(it)));
+                if (strcmp(temp_title, title) == 0)
+                    break;
             }
 
             topic_number = n;
@@ -161,7 +161,7 @@ int receive_RGR(char* answer) {
     char *token;
 
     token = strtok(answer, " ");
-    if (strcmp(token, "RGR") != 0) 
+    if (strcmp(token, "RGR") != 0)
         return 0;
 
     else {
@@ -173,7 +173,7 @@ int receive_RGR(char* answer) {
             printf("Register not successful\n");
         }
         else // wrong protocol
-            return 0;     
+            return 0;
     }
     return 1;
 }
@@ -182,7 +182,7 @@ int receive_PTR(char* answer) {
     char *token;
 
     token = strtok(answer, " ");
-    if (strcmp(token, "PTR") != 0) 
+    if (strcmp(token, "PTR") != 0)
         return 0;
 
     else {
@@ -220,7 +220,7 @@ int read_TCP(int fd, char** full_msg, int msg_size, int current_offset){
         *full_msg = realloc(*full_msg, msg_size);
         n += c;
     }
-    
+
     return msg_size;
 }
 
@@ -230,7 +230,7 @@ void write_TCP(int fd, char* reply, int msg_size){
     n = write(fd, reply, msg_size);
     if(n==-1) exit(1);
 
-    
+
     while(n < msg_size){
         n = write(fd, reply + n, msg_size - n);
         if(n==-1) exit(1);
@@ -243,7 +243,7 @@ void send_ERR_MSG_UDP(int fd, struct addrinfo **res) {
     n = sendto(fd, ERR_MSG, ERR_LEN, 0, (*res)->ai_addr, (*res)->ai_addrlen);
     if (n == -1) {
         exit(ERROR);
-    } 
+    }
 }
 
 void get_txtfile(char* filename, char* txt, int length){
@@ -328,7 +328,7 @@ void print_topic_list(List *topics) {
 
     int n = 1;
     while(hasNext(it)) {
-        List *topic= next(it); 
+        List *topic= next(it);
         char* title = getTopicTitle(current(topic));
         int id = getTopicID(current(topic));
         printf("%d - %s (%d)\n", n++, title, id);
@@ -364,18 +364,18 @@ void update_question_list(Hash * topics_hash, char *answer) {
     char *token = strtok(answer, " ");    // LQU
     token = strtok(NULL, " ");  // N
     n_questions = atoi(token);
-    
+
     List *topic_list = findInTable(topics_hash, hash(topic));
     Topic *current_topic;
     Iterator *it = createIterator(topic_list);
     while (hasNext(it)) {
         current_topic = current(next(it));
-        if (strcmp(getTopicTitle(current_topic), topic) == 0) 
+        if (strcmp(getTopicTitle(current_topic), topic) == 0)
             break;
     }
 
     killIterator(it);
-        
+
     if (n_questions <= 0) {
         printf("Topic \"%s\" has no questions available.\n", topic);
         return;
@@ -401,7 +401,7 @@ void update_question_list(Hash * topics_hash, char *answer) {
             question[i] = token[i];
             i++;
         }
-        
+
         token += i+1;
         question[i] = 0;
         i = 0;
@@ -444,13 +444,16 @@ void getExtension(char * image, char * ext) {
 
 int validate_qs_as_input(char *input, int n_parts) {
     int n = 0;
-    char *token = strtok(input, " ");
+    char * aux = strdup(input);
+    char *token = strtok(aux, " ");
 
     while (token != NULL) {
         token = strtok(NULL, " ");
         n++;
     }
-    
+
+    free(aux);
+
     return (n == n_parts) || (n == n_parts - 1);
 }
 
@@ -461,7 +464,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
     int tl_available = FALSE;
     List *topics = newList();
     Hash *topics_hash = createTable(1024, sizeof(List));
-    int fd_tcp; 
+    int fd_tcp;
     struct addrinfo *res_tcp;
     while (1) {
         bzero(buffer, 1024);
@@ -515,7 +518,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
             update_topic_list(topics, topics_hash, answer);
 
-            free(message);  
+            free(message);
         }
 
         else if (user_exists && (strcmp(token, "topic_select") == 0 || strcmp(token, "ts") == 0)) {
@@ -550,7 +553,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 }
 
                 n = recvfrom(fd_udp, answer, 1024, 0, res_udp->ai_addr, &res_udp->ai_addrlen);
-                if (n == -1) 
+                if (n == -1)
                     exit(ERROR);
 
                 if (!receive_PTR(answer)) {
@@ -559,12 +562,12 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
                 else
                     tl_available = FALSE; //prevents user from selecting topics from a non updated list
-                
+
                 free(message);
             }
             else
                 printf("Invalid command.\ntopic_propose topic / tp topic\n");
-            
+
             free(propose_topic);
 
         }
@@ -592,11 +595,11 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
                 free(message);
             }
-            
+
             else {
                 printf("No topic selected.\n");
             }
-            
+
         }
 
 // TCP FROM NOW ON
@@ -604,7 +607,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             char question_title[11];
             short_cmmd = strcmp(token, "qg") == 0 ? 1 : 0;
 
-            token = strtok(NULL, " ");   
+            token = strtok(NULL, " ");
             if(short_cmmd) {
                 int n = n_questions - atoi(token) + 1;
                 Iterator * it = createIterator(questions_titles);
@@ -619,7 +622,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
             question = strdup(question_title);
             printf("Question is: %s\n", question_title);
-            
+
             int msg_size = strlen(question_title) + strlen(topic) + 7;
             char * message = malloc(sizeof(char) * (msg_size+1));
             sprintf(message, "GQU %s %s\n", topic, question_title);
@@ -631,7 +634,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
             //TODO if reply is not 'QGR EOF' or 'QGR ERR', save question_title as currently selected question
             close(fd_tcp);
-        }  
+        }
 
         else if (strcmp(token, "question_submit") == 0 || strcmp(token, "qs") == 0) {
             char * question, * text_file, * image_file = NULL, * message;
@@ -639,9 +642,9 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             int msg_size, qsize, i, n;
             int isize;
             int qIMG; //flag
-
+            char * aux = to_validate + strlen(token) + 1;
             if (validate_qs_as_input(to_validate, 4)) {
-                token = strtok(NULL, " ");
+                token = strtok(aux, " ");
                 question = strdup(token);
                 token = strtok(NULL, " ");
                 text_file = malloc(sizeof(char) * strlen(token) + 5);
@@ -652,7 +655,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     image_file = strdup(token);
                     i = strlen(image_file) - 1;
                     if (image_file[i] == '\n')
-                        image_file[i] = '\0';  
+                        image_file[i] = '\0';
                     printf("image file is: %s\n", image_file);
                 }
 
@@ -663,7 +666,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
                 qsize = get_filesize(text_file);
                 qdata = (char*) malloc (sizeof(char) * qsize + 1);
-                
+
                 get_txtfile(text_file, qdata, qsize);
 
                 if(qIMG) {
@@ -686,12 +689,12 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
                 else{
                     msg_size = 17 + strlen(topic) + strlen(question) + ndigits(qsize) + qsize;
-                    
+
                     message = malloc(sizeof(char) * (msg_size));
                     sprintf(message, "QUS %d %s %s %d %s 0\n", userID, topic, question, qsize, qdata, qIMG);
                 }
-                
-                
+
+
                 fd_tcp = create_TCP(hostname,  &res_tcp);
                 n = connect(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
                 if (n == -1) exit(1);
@@ -709,9 +712,9 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             char *adata, *idata;
             int msg_size, asize, isize, i;
             int qIMG; //flag
-
+            char * aux = to_validate + strlen(token) + 1;
             if (validate_qs_as_input(to_validate, 3)) {
-                token = strtok(NULL, " ");
+                token = strtok(aux, " ");
                 text_file = strdup(token);
                 token = strtok(NULL, " ");
 
@@ -721,7 +724,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     image_file = strdup(token);
                     i = strlen(image_file) - 1;
                     if (image_file[i] == '\n')
-                        image_file[i] = '\0';  
+                        image_file[i] = '\0';
                     printf("image file is: %s\n", image_file);
                 }
 
@@ -755,11 +758,11 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
                 else{
                     msg_size = 17 + strlen(topic) + strlen(question) + ndigits(asize) + asize;
-                    
+
                     message = malloc(sizeof(char) * (msg_size));
                     sprintf(message, "ANS %d %s %s %d %s 0\n", userID, topic, question, asize, adata, qIMG);
                 }
-                
+
                 fd_tcp = create_TCP(hostname,  &res_tcp);
                 n = connect(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
                 if (n == -1) exit(1);
@@ -806,7 +809,7 @@ int main(int argc, char * argv[]) {
 
 
     fd_udp = create_UDP(hostname, hints_udp, &res_udp);
-    
+
 
     printf("=== Welcome to RC Forum! ===\n\n>>> ");
     receive_input(hostname, buffer, fd_udp, res_udp);
