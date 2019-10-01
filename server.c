@@ -259,6 +259,7 @@ void TCP_input_validation(int fd) {
     printf("Message: %s\n", message);
     memcpy(prefix, aux, 3);
     aux += 4;
+    printf("Prefix: %s\n", prefix);
     if (strcmp(prefix, "QUS") == 0) {
         char topic[11], question[11], userID[6], * qdata, ext[4];
         int qsize, qIMG, isize;
@@ -327,67 +328,8 @@ void TCP_input_validation(int fd) {
             changed = 0;
             writeImageFile(question, topic, qdata, BUF_SIZE, isize, fd, &changed, ext);
         }
-        /*sscanf()
-
-        n = read(fd,message, )
-        topic = strdup(token);
-
-        token = strtok(NULL, " ");
-        question = strdup(token);
-
-        token = strtok(NULL, " ");
-        qsize = atoi(token);
-        
-
-        //manually copy
-        token += ndigits(qsize) + 1;
-        if (msg_size < qsize - (token - message)) {
-            printf("---------- QSIZE REALLOC ----------\n");
-            int offset = token - message;
-            msg_size = read_TCP(fd, &message, msg_size, offset);
-            token = message + offset;
-            printf("-----------NEW MESSAGE-------- \n");
-            write(1, message, msg_size);
-            printf("\nEND-----------------\n");
-        }
-        qdata = calloc(qsize, sizeof(char));
-        memcpy(qdata, token, qsize);
-
-        //strtok after skipping
-        token += qsize + 1;
-        token = strtok(token , " ");
-        qIMG = atoi(token);
-
-        token = strtok(NULL, " ");
-        ext = strdup(token);
-
-        token = strtok(NULL, " ");
-        isize = atoi(token);
-
-        //reposition to avoid destroying data
-        token += ndigits(isize)+1;
-        img_data = calloc(isize, sizeof(char));
-        if (msg_size < isize - (token - message)) {
-            printf("---------- ISIZE REALLOC ----------\n");
-            int offset = token - message;
-            msg_size = read_TCP(fd, &message, msg_size, offset);
-            token = message + offset;
-            printf("-----------NEW MESSAGE-------- \n");
-            write(1, message, msg_size);
-            printf("\nEND-----------------\n");
-        }
-        memcpy(img_data, token, isize);
-
-        createQuestion(topic, question, qdata, qsize,img_data, isize, ext);
-
-        free(topic);
-        free(question);
-        free(userID);
         free(qdata);
-        free(ext);
-        free(img_data);
-        */
-    } else if(strcmp("GQU", message) == 0) {
+    } else if(strcmp("GQU", prefix) == 0) {
         /*
         char * topic, * question;
         token = strtok(NULL, " ");
@@ -407,9 +349,75 @@ void TCP_input_validation(int fd) {
             printf("%s\n", current(next(it)));
         */
 
-    } else if (strcmp("ANS", message) == 0) {
-        char * userID, * topic, *question, *adata, *ext, *img_data;
-        int asize, aIMG, isize;
+    } else if (strcmp("ANS", prefix) == 0) {
+        char topic[11], question[11], userID[6], * qdata, ext[4];
+        int qsize, qIMG, isize;
+        printf("ANS inside!\n");
+
+        bzero(topic, 11);
+        bzero(question, 11);
+        bzero(userID, 6);
+        bzero(ext, 4);
+
+        token = strtok(aux, " ");
+        sprintf(userID, token);
+
+        token = strtok(NULL, " ");
+        sprintf(topic, "%s", token);
+
+        token = strtok(NULL, " ");
+        sprintf(question, "%s", token);
+
+        token = strtok(NULL, " ");
+        qsize = atoi(token);
+
+        aux = token + ndigits(qsize) + 1;
+
+        int answer_number = answerDirectoriesValidation(topic, question);
+
+        qdata = calloc(BUF_SIZE, sizeof(char));
+        
+        //sprintf(qdata, "%s", aux);
+        memcpy(qdata, aux, MIN(qsize, BUF_SIZE - (aux - message)));
+
+        //in case there's some space available in the buffer, fill it in to avoid bad writes
+        if (BUF_SIZE - (aux - message) < qsize)
+            read(fd, qdata + MIN(qsize, BUF_SIZE - (aux - message)), BUF_SIZE - MIN(qsize, BUF_SIZE - (aux - message)));
+
+        int changed = 0;
+        answerWriteTextFile(question, topic, qdata, BUF_SIZE, qsize, fd, &changed, answer_number);
+
+        if (changed){
+            read(fd, message, BUF_SIZE);
+            aux = message + 1;
+        } else
+            aux += qsize + 1; 
+        
+        
+        token = strtok(aux, " ");
+        qIMG = atoi(token);
+        
+        if (qIMG) {
+            token = strtok(NULL, " ");
+            sprintf(ext, "%s", token);
+
+            token = strtok(NULL, " ");
+            isize = atoi(token);
+            printf("Prepare to write: %d\n", isize);
+            //reuse qdata for less memory
+            aux = token + ndigits(isize) + 1;
+            memcpy(qdata, aux, MIN(isize, BUF_SIZE - (aux - message)));
+
+            //in case there's some space available in the buffer, fill it in to avoid bad writes
+            if (BUF_SIZE - (aux - message) < isize) {
+                printf("Sizes: %d %d\n", isize, BUF_SIZE - (aux - message));
+                read(fd, qdata + MIN(isize, BUF_SIZE - (aux - message)), BUF_SIZE - MIN(isize, BUF_SIZE - (aux - message)));
+            }
+
+            changed = 0;
+            answerWriteImageFile(question, topic, qdata, BUF_SIZE, isize, fd, &changed, ext, answer_number);
+        }
+        free(qdata);
         /*
         token = strtok(NULL, " ");
         userID = strdup(token);

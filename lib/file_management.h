@@ -14,5 +14,7 @@ List * getTopicQuestions(char * dir_name, int* list_size);
 void validateDirectories(char * topic, char * question);
 void writeTextFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed);
 void writeImageFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed, char * ext);
-
+int answerDirectoriesValidation(char * topic, char * question);
+void answerWriteTextFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed, int answer_number);
+void answerWriteImageFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed, char * ext, int answer_number);
 #endif

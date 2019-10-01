@@ -58,7 +58,7 @@ void writeImageFile(char * question, char * topic, char * buffer, int buffer_siz
 
 void writeToFile(char * filename, char * buffer, int buffer_size, int total_size, int fd, int * changed) {
     FILE * f = fopen(filename, "w+");
-
+    printf("Opened: %s\n", filename);
     while (total_size > 0) {
         total_size -= fwrite(buffer, sizeof(char), MIN(total_size, buffer_size), f);
         if (total_size > 0) { 
@@ -123,6 +123,31 @@ int getNumberOfAnswers(char * topic, char * question) {
     free(dir);
     closedir(dirp);
     return n_files;
+}
+
+int answerDirectoriesValidation(char * topic, char * question) {
+    int answer_number = getNumberOfAnswers(topic, question) + 1;
+    char * dir = calloc(PREFIX_LEN + strlen(topic) + 1 + strlen(question) * 2 + 5 + 1,sizeof(char));
+    validateDirectories(topic, question);
+
+    struct stat sb;
+    if (stat(dir, &sb) == -1) {
+        sprintf(dir, "%s%s/%s/%s_%02d/", PREFIX, topic, question, question, answer_number);
+        int check = mkdir(dir, 0700);
+    }
+    return answer_number;
+}
+
+void answerWriteTextFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed, int answer_number) {
+    char * file_text = calloc(PREFIX_LEN + strlen(topic) + 1 + strlen(question) * 2 + 5+ strlen("answer.") + EXT_LEN + 1, sizeof(char));
+    sprintf(file_text, "%s%s/%s/%s_%02d/answer.txt", PREFIX, topic, question, question, answer_number);
+    writeToFile(file_text, buffer, buffer_size, qsize, fd, changed);
+}
+
+void answerWriteImageFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed, char * ext, int answer_number) {
+    char * file_img = calloc(PREFIX_LEN + strlen(topic) + 1 + strlen(question) * 2 + 5 + strlen("image.") + EXT_LEN + 1, sizeof(char));
+    sprintf(file_img, "%s%s/%s/%s_%02d/image.%s", PREFIX, topic, question, question, answer_number, ext);
+    writeToFile(file_img, buffer, buffer_size, qsize, fd, changed);
 }
 
 void createAnswer(char * topic, char * question, char * text, int text_size, char * image, int image_size, char * ext) {
