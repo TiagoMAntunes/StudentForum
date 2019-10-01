@@ -57,6 +57,19 @@ int isEmpty(List *l)
     return l->next == NULL;
 }
 
+int listSize(List *l) {
+    Iterator *it = createIterator(l);
+    int n = 0;
+
+    while(hasNext(it)){
+        n++;
+        next(it);
+    }
+
+    return n;
+    
+}
+
 void listFree(List *head)
 {
     List *tmp;

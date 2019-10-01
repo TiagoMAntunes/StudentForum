@@ -579,6 +579,7 @@ int main(int argc, char *argv[])
                     
                     //get list of topic questions
                     List * questions_list = getTopicQuestions(token, &j);
+                    int n_questions = (questions_list == NULL ? 0 : listSize(questions_list));
 
                     //Create message data
                     char * message = calloc(7 + ndigits(j) + j * (10 + 1 + 5 + 1 + 2), sizeof(char));
@@ -587,8 +588,8 @@ int main(int argc, char *argv[])
                     //LQR N
                     memcpy(msg_help, "LQR ", 4);
                     msg_help += 4;
-                    sprintf(msg_help, "%d ", j);
-                    msg_help += ndigits(j) + 1;
+                    sprintf(msg_help, "%d ", n_questions);
+                    msg_help += ndigits(n_questions) + 1;
                     
                     //populate with the amount of questions
                     if (questions_list != NULL) {

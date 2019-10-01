@@ -64,4 +64,9 @@ void listFree(List *head);
  */
 void *current(List *el);
 
+/**
+ * Returns list's size
+ */
+int listSize(List *l);
+
 #endif
