@@ -83,7 +83,7 @@ void send_ERR_MSG_UDP(int fd, struct addrinfo **res) {
     n = sendto(fd, ERR_MSG, ERR_LEN, 0, (*res)->ai_addr, (*res)->ai_addrlen);
     if (n == -1) {
         exit(ERROR);
-    } 
+    }
 }
 
 int registered_user(Hash *users, int userID) {
@@ -93,13 +93,13 @@ int registered_user(Hash *users, int userID) {
 }
 
 int verify_ID(char *stringID) {
-    int len = strlen(stringID); 
+    int len = strlen(stringID);
     char new[len +2];
     strcpy(new, stringID);
 
-    if (stringID[-1] != '\n')  
+    if (stringID[len-1] != '\n')
         strcat(new, "\n");
-    
+
     int i = 0;
     while (new[i] != '\n') {
         if (new[i] > '9' || new[i] < 0)
@@ -107,7 +107,7 @@ int verify_ID(char *stringID) {
         i++;
     }
 
-    if (i != 5) 
+    if (i != 5)
         return 0;
 
     return 1;
@@ -135,8 +135,8 @@ int list_topics(List* topics, int n_topics, char *list) {
         char* title = getTopicTitle(current(next_topic));
         int len = strlen(title);
 
-        for (int i = 0; i < len; i++) { 
-            if (title[i] != '\0')        
+        for (int i = 0; i < len; i++) {
+            if (title[i] != '\0')
                 list[t++] = title[i];
         }
         list[t++] = ':';
@@ -181,7 +181,7 @@ void write_TCP(int fd, char* reply, int msg_size){
     n = write(fd, reply, msg_size);
     if(n==-1) exit(1);
 
-    
+
     while(n < msg_size){
         n = write(fd, reply + n, msg_size - n);
         if(n==-1) exit(1);
@@ -324,11 +324,11 @@ void TCP_input_validation(int fd, char * message, int msg_size) {
         topic = strdup(token);
 
         token = strtok(NULL, " ");
-        
+
         int j = strlen(token);
         if (token[j-1] == '\n') token[j-1] = '\0';
         question = strdup(token);
-        
+
         List * answers = getAnswers(topic, question);
 
         Iterator * it = createIterator(answers);
@@ -336,7 +336,7 @@ void TCP_input_validation(int fd, char * message, int msg_size) {
         while (hasNext(it))
             printf("%s\n", current(next(it)));
 
-        
+
 
     } else if (strcmp("ANS", prefix) == 0) {
         char * userID, * topic, *question, *adata, *ext, *img_data;
@@ -403,7 +403,7 @@ void TCP_input_validation(int fd, char * message, int msg_size) {
         free(adata);
         free(ext);
         free(img_data);
-    } 
+    }
 
     free(prefix);
 }
@@ -461,7 +461,7 @@ int main(int argc, char *argv[])
                 else if (pid == 0){ //Child process
                     printf("dei fork\n");
                     //write(newfd, "Oi babyyy\n", 11);
-                    
+
                     int msg_size = MAX_REQ_LEN;
                     char * message = calloc(msg_size, sizeof(char));
                     int reply_len;
@@ -489,7 +489,7 @@ int main(int argc, char *argv[])
             printf("Message received: %s\n", buffer);
             char *to_validate = strdup(buffer); // preciso para validar protocolo
             char *to_token = strdup(buffer);    // os strtok do PTP so funcionam co esta linha
-            token = strtok(buffer, " \n");  
+            token = strtok(buffer, " \n");
 
             if (strcmp(token, "REG") == 0) {
                 if (validate_REG(to_validate)) {
@@ -512,7 +512,7 @@ int main(int argc, char *argv[])
                         free(list);
                         free(message);
                     }
-                    else 
+                    else
                         n = sendto(fd_udp, "LTR 0\n", 6, 0, (struct sockaddr *) &user_addr, user_addrlen);
                 }
                  else {
@@ -530,19 +530,19 @@ int main(int argc, char *argv[])
                     token = strtok(NULL, " \n");
 
                     if (n_topics == MAX_TOPICS) {
-                        n = sendto(fd_udp, "PTR FUL", 8, 0, (struct sockaddr *) &user_addr, user_addrlen);
+                        n = sendto(fd_udp, "PTR FUL\n", 8, 0, (struct sockaddr *) &user_addr, user_addrlen);
                         if (n == -1)
                             exit(ERROR);
                     }
 
                     else if (token != NULL || !registered_user(users, atoi(stringID)) || strlen(topic_title) > 10) {
-                        n = sendto(fd_udp, "PTR NOK", 8, 0, (struct sockaddr *) &user_addr, user_addrlen);
+                        n = sendto(fd_udp, "PTR NOK\n", 8, 0, (struct sockaddr *) &user_addr, user_addrlen);
                         if (n == -1)
                             exit(ERROR);
                     }
 
                     else if (topic_exists(topics, topic_title)) {
-                        n = sendto(fd_udp, "PTR DUP", 8, 0, (struct sockaddr *) &user_addr, user_addrlen);
+                        n = sendto(fd_udp, "PTR DUP\n", 8, 0, (struct sockaddr *) &user_addr, user_addrlen);
                         printf("Returned duplication information\n");
                         if (n == -1)
                             exit(ERROR);
@@ -554,7 +554,7 @@ int main(int argc, char *argv[])
                         insertInTable(topics_hash, new, hash(topic_title));
                         n_topics++;
 
-                        n = sendto(fd_udp, "PTR OK", 7, 0, (struct sockaddr *) &user_addr, user_addrlen);
+                        n = sendto(fd_udp, "PTR OK\n", 7, 0, (struct sockaddr *) &user_addr, user_addrlen);
                         printf("Returned OK information\n");
                         if (n == -1)
                             exit(ERROR);
@@ -567,16 +567,16 @@ int main(int argc, char *argv[])
                     send_ERR_MSG_UDP(fd_udp, &res_udp);
                 }
 
-            
+
             } else if (strcmp(token, "LQU") == 0) {
                 if (validate_LQU(to_validate)) {
                     token = strtok(to_token, " ");
                     token = strtok(NULL, " ");
-                    
+
                     //remove \n
                     int j = strlen(token);
                     if (token[j-1] == '\n') token[j-1] = '\0';
-                    
+
                     //get list of topic questions
                     List * questions_list = getTopicQuestions(token, &j);
                     int n_questions = (questions_list == NULL ? 0 : listSize(questions_list));
@@ -588,15 +588,15 @@ int main(int argc, char *argv[])
                     //LQR N
                     memcpy(msg_help, "LQR ", 4);
                     msg_help += 4;
-                    sprintf(msg_help, "%d ", n_questions);
-                    msg_help += ndigits(n_questions) + 1;
-                    
+                    sprintf(msg_help, "%d", n_questions);
+                    msg_help += ndigits(n_questions);
+
                     //populate with the amount of questions
                     if (questions_list != NULL) {
                         Iterator * it = createIterator(questions_list);
                         while (j > 0) {
                             char * question = (char * ) current(next(it));
-                            sprintf(msg_help, "%s:%s:%s ", question, "12345", "NA");
+                            sprintf(msg_help, " %s:%s:%s", question, "12345", "03");
                             msg_help += 10 + strlen(question);
                             j--;
                             free(question);
@@ -626,7 +626,7 @@ int main(int argc, char *argv[])
             bzero(buffer, 1024);
             free(to_validate);
             free(to_token);
-            
+
         }
     }
 }
