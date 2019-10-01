@@ -634,6 +634,8 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
             //TODO if reply is not 'QGR EOF' or 'QGR ERR', save question_title as currently selected question
             close(fd_tcp);
+            free(message);
+            free(question);
         }
 
         else if (strcmp(token, "question_submit") == 0 || strcmp(token, "qs") == 0) {
@@ -685,6 +687,9 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     printf("Image size: %d\n", isize);
                     message[msg_size-2] = '\n';
                     message[msg_size-1] = '\0'; //acho q isto n e preciso?
+
+                    free(idata);
+                    free(image_file);
                 }
 
                 else{
@@ -694,14 +699,16 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     sprintf(message, "QUS %d %s %s %d %s 0\n", userID, topic, question, qsize, qdata, qIMG);
                 }
 
-
                 fd_tcp = create_TCP(hostname,  &res_tcp);
                 n = connect(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
                 if (n == -1) exit(1);
 
                 write_TCP(fd_tcp, message, msg_size);
                 close(fd_tcp);
-
+                free(text_file);
+                free(question);
+                free(qdata);
+                free(message);
             }
             else {
                 printf("Invalid command.\nquestion_submit question text_file [image_file.ext] /\nqs question test_file [image_file.ext]\n");
@@ -754,6 +761,9 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     printf("Image size: %d\n", isize);
                     message[msg_size-2] = '\n';
                     message[msg_size-1] = '\0'; //acho q isto n e preciso?
+
+                    free(idata);
+                    free(image_file);
                 }
 
                 else{
@@ -770,6 +780,9 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 write_TCP(fd_tcp, message, msg_size);
                 printf("Enviado!\n");
                 close(fd_tcp);
+                free(adata);
+                free(text_file);
+                free(message);
             }
             else {
                 printf("Invalid command.\nanswer_submit text_file [image_file.ext] /\nas question test_file [image_file.ext]\n");
@@ -780,6 +793,8 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
         else if (strcmp(token, "exit\n") == 0) {
             deleteTable(topics_hash);
             freeTopics(topics);
+            free(to_validate);
+            freeaddrinfo(res_tcp);
             printf("Goodbye!\n");
             break;
         }
