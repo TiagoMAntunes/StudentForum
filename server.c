@@ -226,7 +226,7 @@ int validate_PTP(char *msg) {
 
 }
 
-int validate_LQU(char *msg) {   // TODO tem de validar a existencia do topico?
+int validate_LQU(char *msg) {      
     char *token = strtok(msg, " "); // LQU
 
     token = strtok(NULL, " ");
@@ -601,7 +601,6 @@ int main(int argc, char *argv[])
                 if (validate_PTP(to_validate)) {
                     token = strtok(to_token, " ");
                     token = strtok(NULL, " ");
-                    printf("token = %s\n", token);
                     char *stringID = strdup(token);
                     token = strtok(NULL, " \n");
                     char *topic_title = strdup(token);
@@ -681,11 +680,10 @@ int main(int argc, char *argv[])
                         }
                         killIterator(it);
                         listFree(questions_list);
-
                     }
 
                     //Finish string
-                    *msg_help = '\n';
+                    *(++msg_help) = '\n';
                     *(++msg_help) = 0;
 
                     n = sendto(fd_udp, message, strlen(message), 0, (struct sockaddr *) &user_addr, user_addrlen);
