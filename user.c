@@ -673,7 +673,8 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
                     int msg_size = strlen(question_title) + strlen(topic) + 7;
                     char * message = malloc(sizeof(char) * (msg_size+1));
-                    sprintf(message, "GQU %s %s\n", topic, question_title);
+                    int k = sprintf(message, "GQU %s %s", topic, question_title);
+                    message[k] = '\n';
 
                     fd_tcp = create_TCP(hostname,  &res_tcp);
                     n = connect(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
@@ -742,8 +743,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     n = sprintf(message, "QUS %d %s %s %d %s %d %s %d ", userID, topic, question, qsize, qdata, qIMG, ext,isize);
                     memcpy(message + n, idata, isize); //copy image to message
                     printf("Image size: %d\n", isize);
-                    message[msg_size-2] = '\n';
-                    message[msg_size-1] = '\0'; //acho q isto n e preciso?
+                    message[n + isize + 1] = '\n';
 
                     free(idata);
                     free(image_file);
@@ -753,7 +753,8 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     msg_size = 17 + strlen(topic) + strlen(question) + ndigits(qsize) + qsize;
 
                     message = malloc(sizeof(char) * (msg_size));
-                    sprintf(message, "QUS %d %s %s %d %s 0\n", userID, topic, question, qsize, qdata, qIMG);
+                    int k = sprintf(message, "QUS %d %s %s %d %s 0", userID, topic, question, qsize, qdata);
+                    message[k] = '\n';
                 }
 
                 fd_tcp = create_TCP(hostname,  &res_tcp);
@@ -816,8 +817,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     n = sprintf(message, "ANS %d %s %s %d %s %d %s %d ", userID, topic, question, asize, adata, qIMG, ext,isize);
                     memcpy(message + n, idata, isize); //copy image to message
                     printf("Image size: %d\n", isize);
-                    message[msg_size-2] = '\n';
-                    message[msg_size-1] = '\0'; //acho q isto n e preciso?
+                    message[n + isize + 1] = '\n';
 
                     free(idata);
                     free(image_file);
@@ -827,7 +827,8 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     msg_size = 17 + strlen(topic) + strlen(question) + ndigits(asize) + asize;
 
                     message = malloc(sizeof(char) * (msg_size));
-                    sprintf(message, "ANS %d %s %s %d %s 0\n", userID, topic, question, asize, adata, qIMG);
+                    int k = sprintf(message, "ANS %d %s %s %d %s 0", userID, topic, question, asize, adata);
+                    message[k] = '\n';
                 }
 
                 fd_tcp = create_TCP(hostname,  &res_tcp);
