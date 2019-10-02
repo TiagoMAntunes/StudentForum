@@ -14,7 +14,6 @@
 #include "lib/question.h"
 #include "lib/answer.h"
 
-#define PORT        "58017"
 #define ERROR       1
 #define TRUE        1
 #define FALSE       0
@@ -32,6 +31,8 @@ int n_questions = 0;
 
 int userID;
 
+char port[6] = "58017";
+
 int create_TCP(char* hostname, struct addrinfo **res) {
     int n, fd;
     struct addrinfo hints;
@@ -41,7 +42,7 @@ int create_TCP(char* hostname, struct addrinfo **res) {
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_NUMERICSERV;
 
-    n = getaddrinfo(hostname, PORT, &hints, res);
+    n = getaddrinfo(hostname, port, &hints, res);
     if (n != 0)
         exit(ERROR);
 
@@ -59,7 +60,7 @@ int create_UDP(char* hostname, struct addrinfo hints, struct addrinfo **res) {
     hints.ai_socktype = SOCK_DGRAM;
     hints.ai_flags = AI_NUMERICSERV;
 
-    n = getaddrinfo(hostname, PORT, &hints, res);
+    n = getaddrinfo(hostname, port, &hints, res);
     if (n != 0)
         exit(ERROR);
 
@@ -870,6 +871,30 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
     }
 }
 
+void parseArgs(int argc, char * argv[], char *hostname){
+    int n = argc, i = 1, hashost = 0;
+
+    if(argc>1){
+        while(n > 1){
+            if(strcmp(argv[i], "-p")==0){
+                strcpy(port, argv[i+1]);
+                printf("custom port was set as %s\n", port);
+            }
+            else if(strcmp(argv[i], "-n")==0){
+                strcpy(hostname, argv[i+1]);
+                printf("custom hostname was set as %s\n", hostname);
+                hashost = 1;
+            }
+            n -= 2;
+            i += 2;
+        }
+    }
+
+    if(!hashost){
+        gethostname(hostname, 1023);
+    }
+}
+
 int main(int argc, char * argv[]) {
     char buffer[1024];
 
@@ -878,7 +903,8 @@ int main(int argc, char * argv[]) {
 
     char hostname[1024];
     hostname[1023] = '\0';
-    gethostname(hostname, 1023);
+
+    parseArgs(argc, argv, hostname);
 
     fd_udp = create_UDP(hostname, hints_udp, &res_udp);
 
