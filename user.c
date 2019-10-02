@@ -513,9 +513,17 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 }
 
                 n = recvfrom(fd_udp, answer, 1024, 0, res_udp->ai_addr, &res_udp->ai_addrlen);
-                user_exists = 1; //depende da resposta do server
+                if (errno == EAGAIN) {
+                    printf("Server didn't respond. Try again.\n");
+                }
+                else if (n == -1 && errno != EAGAIN) {
+                    exit(ERROR);
+                }
+                else {
+                    user_exists = 1; //depende da resposta do server
+                    receive_RGR(answer);
+                }
 
-                receive_RGR(answer);
                 free(message);
             }
             else
@@ -532,9 +540,16 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             }
 
             n = recvfrom(fd_udp, answer, 1024, 0, res_udp->ai_addr, &res_udp->ai_addrlen);
-            
-            if (receive_LTR_LQR(answer, "LTR")) 
-                update_topic_list(topics, topics_hash, answer);
+            if (errno == EAGAIN) {
+                printf("Server didn't respond. Try again.\n");
+            }
+            else if (n == -1 && errno != EAGAIN) {
+                exit(ERROR);
+            }
+            else {
+                if (receive_LTR_LQR(answer, "LTR")) 
+                    update_topic_list(topics, topics_hash, answer);
+            }
 
             free(message);
         }
@@ -574,10 +589,15 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 }
 
                 n = recvfrom(fd_udp, answer, 1024, 0, res_udp->ai_addr, &res_udp->ai_addrlen);
-                if (n == -1)
+                if (errno == EAGAIN) {
+                    printf("Server didn't respond. Try again.\n");
+                }
+                else if (n == -1 && errno != EAGAIN) {
                     exit(ERROR);
-
-                receive_PTR(answer, &tl_available, propose_topic, userID, topics);      
+                }
+                else {
+                    receive_PTR(answer, &tl_available, propose_topic, userID, topics); 
+                }     
                 free(message);
             }
             else
@@ -600,13 +620,20 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 }
 
                 n = recvfrom(fd_udp, answer, 1024, 0, res_udp->ai_addr, &res_udp->ai_addrlen);
+                if (errno == EAGAIN) {
+                    printf("Server didn't respond. Try again.\n");
+                }
+                else if (n == -1 && errno != EAGAIN) {
+                    exit(ERROR);
+                }
+                else {
+                    int j = strlen(answer);
+                    if (answer[j-1] == '\n') answer[j-1] = '\0';
 
-                int j = strlen(answer);
-                if (answer[j-1] == '\n') answer[j-1] = '\0';
-
-                if (receive_LTR_LQR(answer, "LQR")) {
-                    update_question_list(topics_hash, answer);
-                    ql_available = TRUE;
+                    if (receive_LTR_LQR(answer, "LQR")) {
+                        update_question_list(topics_hash, answer);
+                        ql_available = TRUE;
+                    }
                 }
 
                 free(message);
@@ -647,6 +674,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     int msg_size = strlen(question_title) + strlen(topic) + 7;
                     char * message = malloc(sizeof(char) * (msg_size+1));
                     sprintf(message, "GQU %s %s\n", topic, question_title);
+
                     fd_tcp = create_TCP(hostname,  &res_tcp);
                     n = connect(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
                     if (n == -1) exit(1);
@@ -852,6 +880,12 @@ int main(int argc, char * argv[]) {
     gethostname(hostname, 1023);
 
     fd_udp = create_UDP(hostname, hints_udp, &res_udp);
+
+    struct timeval time;
+    time.tv_sec = 2;
+    if (setsockopt(fd_udp, SOL_SOCKET, SO_RCVTIMEO, &time, sizeof(time)) < 0) {
+        exit(ERROR);
+    }
 
     printf("=== Welcome to RC Forum! ===\n\n>>> ");
     receive_input(hostname, buffer, fd_udp, res_udp);
