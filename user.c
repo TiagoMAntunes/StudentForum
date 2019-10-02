@@ -70,6 +70,17 @@ int create_UDP(char* hostname, struct addrinfo hints, struct addrinfo **res) {
     return fd;
 }
 
+int is_number(char *text) {
+    int len = strlen(text);
+
+    for (int i = 0; i < len; i++) {
+        if (text[i] < '0' || text[i] > '9')
+            return 0;
+    }
+
+    return 1;
+}
+
 int verify_ID(char *stringID) {
 
     int i = 0;
@@ -123,7 +134,9 @@ int select_topic(List* topics, Hash* topics_hash, char *temp_topic, int short_cm
                 next(it);
                 n++;
             }
-            topic = getTopicTitle(current(next(it)));
+
+            if (topic != NULL) free(topic);
+            topic = strdup(getTopicTitle(current(next(it))));
             killIterator(it);
             return 1;
         }
@@ -144,7 +157,8 @@ int select_topic(List* topics, Hash* topics_hash, char *temp_topic, int short_cm
             }
 
             topic_number = n;
-            topic = title;
+            if (topic != NULL) free(topic);
+            topic = strdup(title);
             question_number = -1;
             question = NULL;
 
@@ -157,12 +171,12 @@ int select_topic(List* topics, Hash* topics_hash, char *temp_topic, int short_cm
     }
 }
 
-int receive_RGR(char* answer) {
+void receive_RGR(char* answer) {
     char *token;
 
     token = strtok(answer, " ");
     if (strcmp(token, "RGR") != 0)
-        return 0;
+        printf("Unexpected server response.\n");
 
     else {
         token = strtok(NULL, " \n");
@@ -172,23 +186,25 @@ int receive_RGR(char* answer) {
         else if (strcmp(token, "NOK") == 0) {
             printf("Register not successful\n");
         }
-        else // wrong protocol
-            return 0;
+        else
+            printf("Unexpected server response.\n");       
     }
-    return 1;
 }
 
-int receive_PTR(char* answer) {
+void receive_PTR(char* answer, int *tl_available, char *propose_topic, int userID, List *topics) {
     char *token;
 
     token = strtok(answer, " ");
-    if (strcmp(token, "PTR") != 0)
-        return 0;
-
+    if (strcmp(token, "PTR") != 0) 
+        printf("Unexpected server response.\n");
+    
     else {
         token = strtok(NULL, " \n");
         if (strcmp(token, "OK") == 0) {
-            printf("Topic successfully proposed.\n");
+            *tl_available = FALSE;
+            if (topic != NULL) free(topic);
+            topic = strdup(propose_topic);
+            printf("Topic successfully proposed.\nCurrent topic: %s\n", topic);
         }
         else if (strcmp(token, "DUP") == 0) {
             printf("Topic already exists.\n");
@@ -200,8 +216,20 @@ int receive_PTR(char* answer) {
             printf("Invalid request.\n");
         }
         else // wrong protocol
-            return 0;
+            printf("Unexpected server response.\n");;
     }
+}
+
+int receive_LTR_LQR(char *answer, char *text) {
+    char *aux = strdup(answer);
+    char *token = strtok(aux, " ");
+
+    if (strcmp(token, text) != 0) {
+        printf("Invalid server response.\n");
+        free(aux);
+        return 0;
+    }
+    free(aux);
     return 1;
 }
 
@@ -236,14 +264,6 @@ void write_TCP(int fd, char* reply, int msg_size){
         if(n==-1) exit(1);
     }
     //write(1, reply, msg_size);
-}
-
-void send_ERR_MSG_UDP(int fd, struct addrinfo **res) {
-    int n;
-    n = sendto(fd, ERR_MSG, ERR_LEN, 0, (*res)->ai_addr, (*res)->ai_addrlen);
-    if (n == -1) {
-        exit(ERROR);
-    }
 }
 
 void get_txtfile(char* filename, char* txt, int length){
@@ -457,15 +477,19 @@ int validate_qs_as_input(char *input, int n_parts) {
     return (n == n_parts) || (n == n_parts - 1);
 }
 
+
+
 void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *res_udp) {
     char *token, *stringID;
     int n, user_exists, short_cmmd = 0;
     char answer[1024];
-    int tl_available = FALSE;
+    int tl_available = FALSE;   // true if user asked for topic list
+    int ql_available = FALSE;   // true if user asked for question list
     List *topics = newList();
     Hash *topics_hash = createTable(1024, sizeof(List));
     int fd_tcp;
     struct addrinfo *res_tcp;
+
     while (1) {
         bzero(buffer, 1024);
         bzero(answer, 1024);
@@ -489,13 +513,9 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 }
 
                 n = recvfrom(fd_udp, answer, 1024, 0, res_udp->ai_addr, &res_udp->ai_addrlen);
-                //printf("%s", answer);
                 user_exists = 1; //depende da resposta do server
 
-                if (!receive_RGR(answer)) {
-                    send_ERR_MSG_UDP(fd_udp, &res_udp);
-                }
-
+                receive_RGR(answer);
                 free(message);
             }
             else
@@ -512,11 +532,9 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             }
 
             n = recvfrom(fd_udp, answer, 1024, 0, res_udp->ai_addr, &res_udp->ai_addrlen);
-            //printf("%s\n", answer);
-
-            // TODO validar protocolo de LTR ?
-
-            update_topic_list(topics, topics_hash, answer);
+            
+            if (receive_LTR_LQR(answer, "LTR")) 
+                update_topic_list(topics, topics_hash, answer);
 
             free(message);
         }
@@ -530,8 +548,11 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 if (!select_topic(topics, topics_hash, temp_topic, short_cmmd)) {
                     printf("Invalid topic selected.\n");
                 }
+                else {                
+                    ql_available = FALSE;
+                    printf("Current topic: %s\n", topic);
+                }
 
-                printf("Current topic: %s\n", topic);
                 free(temp_topic);
             }
             else
@@ -556,13 +577,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 if (n == -1)
                     exit(ERROR);
 
-                if (!receive_PTR(answer)) {
-                    send_ERR_MSG_UDP(fd_udp, &res_udp);
-                }
-
-                else
-                    tl_available = FALSE; //prevents user from selecting topics from a non updated list
-
+                receive_PTR(answer, &tl_available, propose_topic, userID, topics);      
                 free(message);
             }
             else
@@ -585,13 +600,14 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 }
 
                 n = recvfrom(fd_udp, answer, 1024, 0, res_udp->ai_addr, &res_udp->ai_addrlen);
-                printf("%s\n", answer);
 
                 int j = strlen(answer);
                 if (answer[j-1] == '\n') answer[j-1] = '\0';
 
-                // TODO LQU protocol validation?
-                update_question_list(topics_hash, answer);
+                if (receive_LTR_LQR(answer, "LQR")) {
+                    update_question_list(topics_hash, answer);
+                    ql_available = TRUE;
+                }
 
                 free(message);
             }
@@ -604,38 +620,51 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
 // TCP FROM NOW ON
         else if (user_exists && topic != NULL && (strcmp(token, "question_get") == 0 || strcmp(token, "qg") == 0)) {
-            char question_title[11];
-            short_cmmd = strcmp(token, "qg") == 0 ? 1 : 0;
+            if (ql_available) {
+                char question_title[11];
+                short_cmmd = strcmp(token, "qg") == 0 ? 1 : 0;
 
-            token = strtok(NULL, " ");
-            if(short_cmmd) {
-                int n = n_questions - atoi(token) + 1;
-                Iterator * it = createIterator(questions_titles);
-                char * helper;
-                while (n-- > 0) helper = current(next(it));
-                strcpy(question_title, helper);
-                killIterator(it);
-                //TODO: VALIDATE INPUT NUMBER
+                token = strtok(NULL, " \n");
+                if (token != NULL) {
+                    if(short_cmmd && is_number(token) && atoi(token) <= n_questions) {
+                        int n = n_questions - atoi(token) + 1;
+                        printf("n_questions = %d, n = %d\n", n_questions, n);
+                        Iterator * it = createIterator(questions_titles);
+                        char * helper;
+                        while (n-- > 0) {
+                            helper = current(next(it));
+                        }
+                        strcpy(question_title, helper);
+                        killIterator(it);
+                    }
+
+                    else 
+                        strcpy(question_title, token);
+
+                    question = strdup(question_title);
+                //    printf("Question is: %s\n", question_title);
+
+                    int msg_size = strlen(question_title) + strlen(topic) + 7;
+                    char * message = malloc(sizeof(char) * (msg_size+1));
+                    sprintf(message, "GQU %s %s\n", topic, question_title);
+                    fd_tcp = create_TCP(hostname,  &res_tcp);
+                    n = connect(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
+                    if (n == -1) exit(1);
+
+                    write_TCP(fd_tcp, message, msg_size);
+
+                    //TODO if reply is not 'QGR EOF' or 'QGR ERR', save question_title as currently selected question
+                    close(fd_tcp);
+                    free(message);
+                    free(question);
+                } 
+                else {
+                    printf("Invalid command.\nquestion_get question / reg question_number\n");
+                }
             }
-            else
-                strcpy(question_title, token);
-
-            question = strdup(question_title);
-            printf("Question is: %s\n", question_title);
-
-            int msg_size = strlen(question_title) + strlen(topic) + 7;
-            char * message = malloc(sizeof(char) * (msg_size+1));
-            sprintf(message, "GQU %s %s\n", topic, question_title);
-            fd_tcp = create_TCP(hostname,  &res_tcp);
-            n = connect(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
-            if (n == -1) exit(1);
-
-            write_TCP(fd_tcp, message, msg_size);
-
-            //TODO if reply is not 'QGR EOF' or 'QGR ERR', save question_title as currently selected question
-            close(fd_tcp);
-            free(message);
-            free(question);
+            else {
+                printf("Cannot select question.\nYou must request question list first.\n"); 
+            }
         }
 
         else if (strcmp(token, "question_submit") == 0 || strcmp(token, "qs") == 0) {
@@ -822,9 +851,7 @@ int main(int argc, char * argv[]) {
     hostname[1023] = '\0';
     gethostname(hostname, 1023);
 
-
     fd_udp = create_UDP(hostname, hints_udp, &res_udp);
-
 
     printf("=== Welcome to RC Forum! ===\n\n>>> ");
     receive_input(hostname, buffer, fd_udp, res_udp);
