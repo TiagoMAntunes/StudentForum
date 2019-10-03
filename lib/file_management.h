@@ -17,7 +17,7 @@ void writeImageFile(char * question, char * topic, char * buffer, int buffer_siz
 int answerDirectoriesValidation(char * topic, char * question);
 void answerWriteTextFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed, int answer_number);
 void answerWriteImageFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed, char * ext, int answer_number);
-void writeAuthorInformation(char * topic, char * question, char * userID);
+void writeAuthorInformation(char * topic, char * question, char * userID, char * ext);
 void getAuthorInformation(char * topic, char * question, char * userID, char * ext);
 char * getQuestionPath(char * topic, char * question);
 char * getImagePath(char * topic, char * question, char * ext);

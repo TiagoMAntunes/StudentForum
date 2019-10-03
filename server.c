@@ -366,7 +366,7 @@ void TCP_input_validation(int fd) {
             changed = 0;
             writeImageFile(question, topic, qdata, BUF_SIZE, isize, fd, &changed, ext);
         }
-        writeAuthorInformation(topic, question, userID);
+        writeAuthorInformation(topic, question, userID, ext);
         free(qdata);
     } else if(strcmp("GQU", prefix) == 0) {
         char topic[11], question[11], userID[6], ext[4];
@@ -510,7 +510,7 @@ void TCP_input_validation(int fd) {
             answerWriteImageFile(question, topic, qdata, BUF_SIZE, isize, fd, &changed, ext, answer_number);
         }
         free(qdata);
-        writeAuthorInformation(topic, question, userID);
+        writeAuthorInformation(topic, question, userID, ext);
     }
     printf("Son is finished!\n");
 

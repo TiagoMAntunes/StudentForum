@@ -248,6 +248,7 @@ int read_TCP(int fd, char** full_msg, int msg_size, int current_offset){
             msg_size *= 2;
         *full_msg = realloc(*full_msg, msg_size);
         n += c;
+        printf("New size: %d\n", msg_size);
     }
 
     return msg_size;
@@ -682,9 +683,10 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     if (n == -1) exit(1);
 
                     write_TCP(fd_tcp, message, msg_size);
-                    bzero(message, BUFSIZ);
-                    read_TCP(fd_tcp, &message, msg_size, 0);
-                    printf("%s\n", message);
+                    
+                    char * ans = calloc(1024, sizeof(char));
+                    k = read_TCP(fd_tcp, &ans, 1024, 0);
+                    write(1, ans, k);
                     //TODO if reply is not 'QGR EOF' or 'QGR ERR', save question_title as currently selected question
                     close(fd_tcp);
                     free(message);

@@ -68,13 +68,15 @@ void readFromFile(char * filename, char * buffer, int buffer_size, int total_siz
     fclose(f);
 }
 
-void writeAuthorInformation(char * topic, char * question, char * userID) {
+void writeAuthorInformation(char * topic, char * question, char * userID, char * ext) {
     char * filename = calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 2 + 12 /* .information */ + 1, sizeof(char));
     sprintf(filename, "%s%s/%s/.information", PREFIX, topic, question);
     
     FILE * f = fopen(filename, "w+");
-
+    printf("%d\n", f);
     fwrite(userID, sizeof(char), 5, f);
+    fwrite(" ", sizeof(char), 1, f);
+    fwrite(ext, sizeof(char), 3, f);
 
     fclose(f);
     free(filename);
