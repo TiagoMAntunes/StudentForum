@@ -670,7 +670,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                         strcpy(question_title, token);
 
                     question = strdup(question_title);
-                //    printf("Question is: %s\n", question_title);
+                    //printf("Question is: %s\n", question_title);
 
                     int msg_size = strlen(question_title) + strlen(topic) + 7;
                     char * message = malloc(sizeof(char) * (msg_size+1));
@@ -686,7 +686,6 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     //TODO if reply is not 'QGR EOF' or 'QGR ERR', save question_title as currently selected question
                     close(fd_tcp);
                     free(message);
-                    free(question);
                 } 
                 else {
                     printf("Invalid command.\nquestion_get question / reg question_number\n");
@@ -698,7 +697,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
         }
 
         else if (strcmp(token, "question_submit") == 0 || strcmp(token, "qs") == 0) {
-            char * question, * text_file, * image_file = NULL, * message;
+            char * submit_question, * text_file, * image_file = NULL, * message;
             char *qdata, *idata, ext_txt[5] = ".txt";
             int msg_size, qsize, i, n;
             int isize;
@@ -706,7 +705,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             char * aux = to_validate + strlen(token) + 1;
             if (validate_qs_as_input(to_validate, 4)) {
                 token = strtok(aux, " ");
-                question = strdup(token);
+                submit_question = strdup(token);
                 token = strtok(NULL, " ");
                 text_file = malloc(sizeof(char) * strlen(token) + 5);
                 strcpy(text_file, token);
@@ -738,10 +737,10 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     getExtension(image_file, ext);
                     get_img(image_file, idata, isize);
 
-                    msg_size = 21 + strlen(topic) + strlen(question) + ndigits(qsize) + qsize + ndigits(qIMG) + ndigits(isize) + isize;
+                    msg_size = 21 + strlen(topic) + strlen(submit_question) + ndigits(qsize) + qsize + ndigits(qIMG) + ndigits(isize) + isize;
 
                     message = calloc(msg_size,sizeof(char));
-                    n = sprintf(message, "QUS %d %s %s %d %s %d %s %d ", userID, topic, question, qsize, qdata, qIMG, ext,isize);
+                    n = sprintf(message, "QUS %d %s %s %d %s %d %s %d ", userID, topic, submit_question, qsize, qdata, qIMG, ext,isize);
                     memcpy(message + n, idata, isize); //copy image to message
                     printf("Image size: %d\n", isize);
                     message[n + isize + 1] = '\n';
@@ -751,10 +750,10 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 }
 
                 else{
-                    msg_size = 17 + strlen(topic) + strlen(question) + ndigits(qsize) + qsize;
+                    msg_size = 17 + strlen(topic) + strlen(submit_question) + ndigits(qsize) + qsize;
 
                     message = malloc(sizeof(char) * (msg_size));
-                    int k = sprintf(message, "QUS %d %s %s %d %s 0", userID, topic, question, qsize, qdata);
+                    int k = sprintf(message, "QUS %d %s %s %d %s 0", userID, topic, submit_question, qsize, qdata);
                     message[k] = '\n';
                 }
 
@@ -765,12 +764,12 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 write_TCP(fd_tcp, message, msg_size);
                 close(fd_tcp);
                 free(text_file);
-                free(question);
+                free(submit_question);
                 free(qdata);
                 free(message);
             }
             else {
-                printf("Invalid command.\nquestion_submit question text_file [image_file.ext] /\nqs question test_file [image_file.ext]\n");
+                printf("Invalid command.\nsubmit_question_submit submit_question text_file [image_file.ext] /\nqs submit_question test_file [image_file.ext]\n");
             }
         }
         else if (strcmp(token, "answer_submit") == 0 || strcmp(token, "as") == 0) {
@@ -910,7 +909,9 @@ int main(int argc, char * argv[]) {
 
     struct timeval time;
     time.tv_sec = 2;
-    if (setsockopt(fd_udp, SOL_SOCKET, SO_RCVTIMEO, &time, sizeof(time)) < 0) {
+    time.tv_usec = 0;   
+    int n;
+    if ((n = setsockopt(fd_udp, SOL_SOCKET, SO_RCVTIMEO, &time, sizeof(time))) < 0) {
         exit(ERROR);
     }
 
