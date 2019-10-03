@@ -682,7 +682,9 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     if (n == -1) exit(1);
 
                     write_TCP(fd_tcp, message, msg_size);
-
+                    bzero(message, BUFSIZ);
+                    read_TCP(fd_tcp, &message, msg_size, 0);
+                    printf("%s\n", message);
                     //TODO if reply is not 'QGR EOF' or 'QGR ERR', save question_title as currently selected question
                     close(fd_tcp);
                     free(message);

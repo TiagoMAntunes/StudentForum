@@ -42,20 +42,6 @@ void validateDirectories(char * topic, char * question) {
     }
 }
 
-void writeTextFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed) {
-    char * filename = calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 3 + QUESTION_LEN , sizeof(char)); //textfilename
-    sprintf(filename, "%s%s/%s/question.txt", PREFIX, topic, question);
-    
-    writeToFile(filename, buffer, buffer_size, qsize, fd, changed);
-}
-
-void writeImageFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed, char * ext) {
-    char * filename = calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 3 + IMAGE_LEN + EXT_LEN, sizeof(char));
-    sprintf(filename, "%s%s/%s/image.%s", PREFIX, topic, question, ext);
-    
-    writeToFile(filename, buffer, buffer_size, qsize, fd, changed);
-}
-
 void writeToFile(char * filename, char * buffer, int buffer_size, int total_size, int fd, int * changed) {
     FILE * f = fopen(filename, "w+");
     printf("Opened: %s\n", filename);
@@ -68,6 +54,70 @@ void writeToFile(char * filename, char * buffer, int buffer_size, int total_size
     }
     
     fclose(f);
+}
+
+void readFromFile(char * filename, char * buffer, int buffer_size, int total_size, int fd) {
+    FILE * f = fopen(filename, "r");
+    fread(buffer, buffer_size, sizeof(char), f);
+    while(total_size > 0) {
+        total_size -= write(fd, buffer, buffer_size);
+        if (total_size > 0) {
+            fread(buffer, buffer_size, sizeof(char), f);
+        }
+    }
+    fclose(f);
+}
+
+void writeAuthorInformation(char * topic, char * question, char * userID) {
+    char * filename = calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 2 + 12 /* .information */ + 1, sizeof(char));
+    sprintf(filename, "%s%s/%s/.information", PREFIX, topic, question);
+    
+    FILE * f = fopen(filename, "w+");
+
+    fwrite(userID, sizeof(char), 5, f);
+
+    fclose(f);
+    free(filename);
+}
+
+void getAuthorInformation(char * topic, char * question, char * userID, char * ext) {
+    char * filename = calloc(PREFIX_LEN + strlen(topic) + strlen(question) + 2 + 12 + 1, sizeof(char));
+    sprintf(filename, "%s%s/%s/.information", PREFIX, topic, question);
+    FILE * f = fopen(filename, "r");
+    
+    fread(userID, 5, sizeof(char), f);
+    getc(f);
+    fread(ext, 3, sizeof(char), f);
+
+    fclose(f);
+    free(filename);
+}
+
+void getAnswerInformation(char * answer_dir, char * userID, char * ext) {
+    char * filename = calloc(strlen(answer_dir) + 12 + 1, sizeof(char));
+    sprintf(filename, "%s.information", answer_dir);
+    FILE * f = fopen(filename, "r");
+    
+    fread(userID, 5, sizeof(char), f);
+    getc(f);
+    fread(ext, 3, sizeof(char), f);
+
+    fclose(f);
+    free(filename);
+}
+
+void writeTextFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed) {
+    char * filename = calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 3 + QUESTION_LEN , sizeof(char)); //textfilename
+    sprintf(filename, "%s%s/%s/question.txt", PREFIX, topic, question);
+    
+    writeToFile(filename, buffer, buffer_size, qsize, fd, changed);
+}
+
+void writeImageFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed, char * ext) {
+    char * filename = calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 3 + IMAGE_LEN + EXT_LEN, sizeof(char));
+    sprintf(filename, "%s%s/%s/image.%s", PREFIX, topic, question, ext);
+    
+    writeToFile(filename, buffer, buffer_size, qsize, fd, changed);
 }
 
 void createQuestion(char * topic, char * question, char * text, int text_size, char * image, int image_size, char * ext) {
@@ -194,7 +244,7 @@ void createAnswer(char * topic, char * question, char * text, int text_size, cha
     free(dir);
 }
 
-List * getAnswers(char * topic, char * question) {
+List * getAnswers(char * topic, char * question, int * count) {
     int n;
     struct dirent ** namelist;
     char * dir_name = calloc(PREFIX_LEN + strlen(topic) + 1 + strlen(question) + 2, sizeof(char));
@@ -208,13 +258,17 @@ List * getAnswers(char * topic, char * question) {
     List * res = newList();
 
     int dir_count = 0;
+    int dir_size = strlen(dir_name);
     while (n-- > 0 && dir_count < 10)
       if (namelist[n]->d_type == DT_DIR && strcmp(namelist[n]->d_name, ".") && strcmp(namelist[n]->d_name, "..")) {
-              addEl(res, strdup(namelist[n]->d_name));
+              char * answer = calloc(dir_size + strlen(namelist[n]->d_name) + 2, sizeof(char));
+              sprintf(answer, "%s%s/", dir_name, namelist[n]->d_name);
+              addEl(res, answer);
               dir_count++;
       }
 
     free(namelist);
+    *count = dir_count;
     return res;
 }
 
@@ -240,4 +294,37 @@ List * getTopicQuestions(char * topic, int * list_size) {
     closedir(dir);
     free(dir_name);
     return list;
+}
+
+
+char * getQuestionPath(char * topic, char * question) {
+    char * filename = calloc(PREFIX_LEN + strlen(topic) + strlen(question) + 2 + 12 + 1, sizeof(char));
+
+    sprintf(filename, "%s%s/%s/question.txt", PREFIX, topic, question);
+    return filename;
+}
+
+char * getImagePath(char * topic, char * question, char * ext) {
+    char * filename = calloc(PREFIX_LEN + strlen(topic) + strlen(question) + 2 + 6 /* image. */ + 3 /* ext */ + 1, sizeof(char));
+
+    sprintf(filename, "%s%s/%s/image.%s", PREFIX, topic, question, ext);
+    struct stat sb;
+    if (stat(filename, &sb) == -1) {
+        //does not exist
+        free(filename);
+        return NULL;
+    }
+    return filename;
+}
+
+char * getAnswerQuestionPath(char * answer_dir) {
+    char * filename = calloc(strlen(answer_dir) + 12 + 1, sizeof(char));
+    sprintf(filename, "%squestion.txt", answer_dir);
+    return filename;
+}
+
+char * getAnswerImagePath(char * answer_dir, char * ext) {
+    char * filename = calloc(strlen(answer_dir) + 6 + strlen(ext) + 1, sizeof(char));
+    sprintf(filename, "%simage.%s", answer_dir, ext);
+    return filename;
 }

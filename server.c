@@ -30,6 +30,44 @@
 
 char port[6] = "58017";
 
+void get_img(char* filename, char* img, int size){
+    FILE* f;
+    char buffer[size];
+
+    f = fopen(filename, "r");
+
+    if(f!=NULL){
+
+        while(!feof(f)) {
+            fread(buffer, 1, sizeof(buffer), f);
+        }
+
+        memcpy(img, buffer, size);
+
+        fclose (f);
+    }
+
+    return;
+}
+
+int get_filesize(char* filename){
+    FILE* f;
+    int length;
+
+    f = fopen(filename, "r");
+
+    if(f!=NULL){
+        fseek(f, 0, SEEK_END);
+        length = ftell(f);
+
+        fseek(f, 0, SEEK_SET);
+
+        fclose (f);
+    }
+
+    return length;
+
+}
 
 int create_TCP(char* hostname, struct addrinfo hints, struct addrinfo **res) {
     int n, fd;
@@ -271,7 +309,7 @@ void TCP_input_validation(int fd) {
         bzero(ext, 4);
 
         token = strtok(aux, " ");
-        sprintf(userID, token);
+        sprintf(userID, "%s",token);
 
         token = strtok(NULL, " ");
         sprintf(topic, "%s", token);
@@ -328,26 +366,80 @@ void TCP_input_validation(int fd) {
             changed = 0;
             writeImageFile(question, topic, qdata, BUF_SIZE, isize, fd, &changed, ext);
         }
+        writeAuthorInformation(topic, question, userID);
         free(qdata);
     } else if(strcmp("GQU", prefix) == 0) {
-        /*
-        char * topic, * question;
-        token = strtok(NULL, " ");
-        topic = strdup(token);
+        char topic[11], question[11], userID[6], ext[4];
+        bzero(topic, 11);
+        bzero(question, 11);
+        bzero(userID, 6);
+        bzero(ext, 4);
 
-        token = strtok(NULL, " ");
+        token = strtok(aux, " ");
+        sprintf(topic, "%s", token);
 
-        int j = strlen(token);
-        if (token[j-1] == '\n') token[j-1] = '\0';
-        question = strdup(token);
-
-        List * answers = getAnswers(topic, question);
+        token = strtok(NULL, " \n");
+        sprintf(question, "%s", token);
+        int answers_number;
+        List * answers = getAnswers(topic, question, &answers_number);
 
         Iterator * it = createIterator(answers);
         printf("Available answers:\n");
         while (hasNext(it))
             printf("%s\n", current(next(it)));
-        */
+        killIterator(it);
+
+        bzero(message, BUF_SIZE);
+        getAuthorInformation(topic, question, userID, ext);
+        char * txtfile = getQuestionPath(topic, question);
+        char * imgfile = getImagePath(topic, question, ext);
+
+        int txt_size = get_filesize(txtfile);
+        sprintf(message, "QGR %s %d ", userID, get_filesize(txtfile));
+        write(fd, message, strlen(message));
+        
+        readFromFile(txtfile, message, BUF_SIZE, txt_size, fd);
+
+        int qIMG = imgfile != NULL ? 1 : 0;
+        sprintf(message, " %d ", qIMG);
+
+        write(fd, message, 3);
+        if (qIMG) {
+            int image_size = get_filesize(imgfile);
+            sprintf(message, "%s %d ", ext, image_size);
+            readFromFile(txtfile, message, BUF_SIZE, image_size, fd);
+            free(imgfile);
+        }
+        
+        sprintf(message, " %d", answers_number);
+        
+        it = createIterator(answers);
+        while (hasNext(it)) {
+            char * answer_name = current(next(it));
+            getAnswerInformation(answer_name, userID, ext);
+            free(txtfile);
+            free(imgfile);
+            txtfile = getAnswerQuestionPath(answer_name);
+            imgfile = getAnswerImagePath(answer_name, ext);
+            txt_size = get_filesize(txtfile);
+            sprintf(message, "%s %d ", userID, txt_size);
+
+            write(fd, message, strlen(message));
+
+            readFromFile(txtfile, message, BUF_SIZE, txt_size, fd);
+
+            qIMG = imgfile != NULL ? 1 : 0;
+            sprintf(message, " %d ", qIMG);
+            write(fd, message, strlen(message));
+
+            if (qIMG) {
+                int image_size = get_filesize(imgfile);
+                sprintf(message, "%s %d ", ext, image_size);
+                readFromFile(txtfile, message, BUF_SIZE, image_size, fd);
+                free(imgfile);
+            }
+        }
+        free(txtfile);
 
     } else if (strcmp("ANS", prefix) == 0) {
         char topic[11], question[11], userID[6], * qdata, ext[4];
@@ -418,69 +510,7 @@ void TCP_input_validation(int fd) {
             answerWriteImageFile(question, topic, qdata, BUF_SIZE, isize, fd, &changed, ext, answer_number);
         }
         free(qdata);
-        /*
-        token = strtok(NULL, " ");
-        userID = strdup(token);
-
-        token = strtok(NULL, " ");
-        topic = strdup(token);
-
-        token = strtok(NULL, " ");
-        question = strdup(token);
-
-        token = strtok(NULL, " ");
-        asize = atoi(token);
-
-
-        //manually copy
-        token += ndigits(asize) + 1;
-        if (msg_size < asize - (token - message)) {
-            printf("---------- QSIZE REALLOC ----------\n");
-            int offset = token - message;
-            msg_size = read_TCP(fd, &message, msg_size, offset);
-            token = message + offset;
-            printf("-----------NEW MESSAGE-------- \n");
-            write(1, message, msg_size);
-            printf("\nEND-----------------\n");
-        }
-        adata = calloc(asize, sizeof(char));
-        memcpy(adata, token, asize);
-
-        //strtok after skipping
-        token += asize + 1;
-        token = strtok(token , " ");
-        aIMG = atoi(token);
-
-        token = strtok(NULL, " ");
-        ext = strdup(token);
-
-        token = strtok(NULL, " ");
-        isize = atoi(token);
-
-
-        //reposition to avoid destroying data
-        token += ndigits(isize)+1;
-        img_data = calloc(isize, sizeof(char));
-        if (msg_size < isize - (token - message)) {
-            printf("---------- ISIZE REALLOC ----------\n");
-            int offset = token - message;
-            msg_size = read_TCP(fd, &message, msg_size, offset);
-            token = message + offset;
-            printf("-----------NEW MESSAGE-------- \n");
-            write(1, message, msg_size);
-            printf("\nEND-----------------\n");
-        }
-        memcpy(img_data, token, isize);
-
-        createAnswer(topic, question, adata, asize,img_data, isize, ext);
-
-        free(topic);
-        free(question);
-        free(userID);
-        free(adata);
-        free(ext);
-        free(img_data);
-        */
+        writeAuthorInformation(topic, question, userID);
     }
     printf("Son is finished!\n");
 
