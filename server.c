@@ -439,6 +439,7 @@ void TCP_input_validation(int fd) {
                 free(imgfile);
             }
         }
+        write(fd, "\n", 1);
         free(txtfile);
 
     } else if (strcmp("ANS", prefix) == 0) {
@@ -711,11 +712,9 @@ int main(int argc, char *argv[])
                         killIterator(it);
                         listFree(questions_list);
                     }
-
-                    //Finish string
-                    *(++msg_help) = '\n';
-                    *(++msg_help) = 0;
-
+                    *(msg_help) = '\n';
+                    printf("Char: %c with value %d\n", *msg_help, *msg_help);
+                    printf("String: \"%s\" with size: %d\n", message, strlen(message));
                     n = sendto(fd_udp, message, strlen(message), 0, (struct sockaddr *) &user_addr, user_addrlen);
 
                 }

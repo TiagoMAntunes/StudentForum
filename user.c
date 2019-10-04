@@ -13,6 +13,7 @@
 #include "lib/iterator.h"
 #include "lib/question.h"
 #include "lib/answer.h"
+#include "lib/file_management.h"
 
 #define ERROR       1
 #define TRUE        1
@@ -20,6 +21,7 @@
 #define MAX_REQ_LEN 1024
 #define ERR_MSG     "ERR"
 #define ERR_LEN     4
+#define MIN(A,B) ((A) < (B) ? (A) : (B))
 
 int topic_number = -1, question_number = -1;
 int n_topics = 0;
@@ -684,9 +686,82 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
                     write_TCP(fd_tcp, message, msg_size);
                     
-                    char * ans = calloc(1024, sizeof(char));
-                    k = read_TCP(fd_tcp, &ans, 1024, 0);
-                    write(1, ans, k);
+                    //get answer
+                    int n = read(fd_tcp, answer, 1024);
+                    token = strtok(answer, " ");
+                    if (strcmp(token, "QGR") != 0) 
+                        exit(EXIT_FAILURE);
+
+                    token = strtok(NULL, " ");
+                    char qUserID[6];
+                    sprintf(qUserID, "%s", token);
+                    
+                    token = strtok(NULL, " ");
+                    int qsize = atoi(token);
+
+                    char * aux = token + ndigits(qsize) + 1;
+
+                    validateDirectories(topic, question);
+
+                    char qdata[1024];
+                    bzero(qdata, 1024);
+                    printf("Going to start first copy\n");
+                    memcpy(qdata, aux, MIN(qsize, 1024 - (aux - answer)));
+                    
+                    read(fd_tcp, answer, 1); //get space
+                    //First read is small, only until here
+                    read(fd_tcp, qdata, MIN(qsize, 1024));
+                    /*if (1024 - (aux - answer) < qsize)
+                        read(fd_tcp, qdata + MIN(qsize, 1024 - (aux - answer)), 1024 - MIN(qsize, 1024 - (aux - answer)));
+                    */
+                    int changed = 0;
+                    writeTextFile(question, topic, qdata, 1024, qsize, fd_tcp, &changed);
+
+                    if (changed) {
+                        read(fd_tcp, answer, 1024);
+                        aux = answer + 1;
+                    } else {
+                        aux += qsize + 1;
+                    }
+
+                    token = strtok(aux, " ") + 1;
+                    int qIMG = atoi(token);
+                    
+                    char ext[4] = {0};
+                    if (qIMG) {
+                        token = strtok(NULL, " ");
+                        sprintf(ext, "%s", token);
+
+                        token = strtok(NULL, " ");
+                        int isize = atoi(token);
+                        //reuse qdata for less memory
+                        aux = token + ndigits(isize) + 1;
+                        memcpy(qdata, aux, MIN(isize, 1024 - (aux - answer)));
+
+                        //in case there's some space available in the buffer, fill it in to avoid bad writes
+                        if (1024 - (aux - answer) < isize) {
+                            printf("Sizes: %d %d\n", isize, 1024 - (aux - answer));
+                            read(fd_tcp, qdata + MIN(isize, 1024 - (aux - answer)), 1024 - MIN(isize, 1024 - (aux - answer)));
+                        }
+
+                        changed = 0;
+                        writeImageFile(question, topic, qdata, 1024, isize, fd_tcp, &changed, ext);
+                        if(changed) {
+                            read(fd_tcp, answer, 1024);
+                            aux = answer + 1;
+                        } else 
+                            aux += isize + 1;
+                    }
+
+                    token = strtok(NULL, " ");
+                    int N = atoi(token);
+                    while (N-- > 0) {
+                        read(fd_tcp, answer, 1);
+                        bzero(answer, 1024);
+                    }
+
+                    writeAuthorInformation(topic, question, qUserID, ext);
+
                     //TODO if reply is not 'QGR EOF' or 'QGR ERR', save question_title as currently selected question
                     close(fd_tcp);
                     free(message);
