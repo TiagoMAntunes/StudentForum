@@ -403,6 +403,7 @@ void TCP_input_validation(int fd) {
         int qIMG = imgfile != NULL ? 1 : 0;
         sprintf(message, " %d ", qIMG);
 
+        printf("sending: %s\n", message);       // 
         write(fd, message, 3);
         if (qIMG) {
             int image_size = get_filesize(imgfile);
@@ -424,6 +425,7 @@ void TCP_input_validation(int fd) {
             txt_size = get_filesize(txtfile);
             sprintf(message, "%s %d ", userID, txt_size);
 
+            printf("sending: ")
             write(fd, message, strlen(message));
 
             readFromFile(txtfile, message, BUF_SIZE, txt_size, fd);
@@ -712,7 +714,7 @@ int main(int argc, char *argv[])
                         killIterator(it);
                         listFree(questions_list);
                     }
-                    *(msg_help) = '\n';
+                    *(++msg_help) = '\n';
                     printf("Char: %c with value %d\n", *msg_help, *msg_help);
                     printf("String: \"%s\" with size: %d\n", message, strlen(message));
                     n = sendto(fd_udp, message, strlen(message), 0, (struct sockaddr *) &user_addr, user_addrlen);
