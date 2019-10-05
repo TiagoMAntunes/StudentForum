@@ -25,4 +25,7 @@ void readFromFile(char * filename, char * buffer, int buffer_size, int total_siz
 void getAnswerInformation(char * answer_dir, char * userID, char * ext);
 char * getAnswerQuestionPath(char * answer_dir);
 char * getAnswerImagePath(char * answer_dir, char * ext);
+
+void writeTextFileNew(char *question, char *topic, char *buffer, int n_bytes, int append_flag);
+
 #endif

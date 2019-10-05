@@ -56,6 +56,17 @@ void writeToFile(char * filename, char * buffer, int buffer_size, int total_size
     fclose(f);
 }
 
+void writeTextFileNew(char *question, char *topic, char *buffer, int n_bytes, int append_flag) {
+    char * filename = calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 3 + QUESTION_LEN , sizeof(char)); //textfilename
+    sprintf(filename, "%s%s/%s/question.txt", PREFIX, topic, question);
+
+    FILE *f = fopen(filename, (append_flag ? "a" : "w+"));
+    printf("Opened: %s\n", filename);
+    fwrite(buffer, sizeof(char), n_bytes, f);
+
+    fclose(f);
+}
+
 void readFromFile(char * filename, char * buffer, int buffer_size, int total_size, int fd) {
     FILE * f = fopen(filename, "r");
     fread(buffer, buffer_size, sizeof(char), f);
@@ -67,6 +78,7 @@ void readFromFile(char * filename, char * buffer, int buffer_size, int total_siz
     }
     fclose(f);
 }
+
 
 void writeAuthorInformation(char * topic, char * question, char * userID, char * ext) {
     char * filename = calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 2 + 12 /* .information */ + 1, sizeof(char));

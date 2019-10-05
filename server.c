@@ -66,7 +66,6 @@ int get_filesize(char* filename){
     }
 
     return length;
-
 }
 
 int create_TCP(char* hostname, struct addrinfo hints, struct addrinfo **res) {
@@ -393,12 +392,34 @@ void TCP_input_validation(int fd) {
         getAuthorInformation(topic, question, userID, ext);
         char * txtfile = getQuestionPath(topic, question);
         char * imgfile = getImagePath(topic, question, ext);
-
-        int txt_size = get_filesize(txtfile);
-        sprintf(message, "QGR %s %d ", userID, get_filesize(txtfile));
-        write(fd, message, strlen(message));
+        int txtfile_size = get_filesize(txtfile);
+        sprintf(message, "QGR %s %d ", userID, txtfile_size);
+        int offset = 3 + 1 + 5 + 1 + ndigits(txtfile_size) + 1;
+        int bytes_left = txtfile_size;
         
-        readFromFile(txtfile, message, BUF_SIZE, txt_size, fd);
+
+        int space_left = BUF_SIZE - offset * sizeof(char);
+        int read;
+        FILE * f = fopen(txtfile, "r");
+        while (bytes_left != 0) {
+            read = fread(message + offset * sizeof(char), sizeof(char), MIN(space_left, bytes_left), f);
+            space_left -= read;
+            bytes_left -= read;
+            if (bytes_left != 0) {
+                write(fd, message, BUF_SIZE);
+                bzero(message, BUF_SIZE);
+                offset = 0;
+                space_left = BUF_SIZE;
+            }
+        }
+
+        // TODO acabar de encher buffer com qIMG e afins
+        write(fd, message, BUF_SIZE);
+
+
+/*
+        printf("after while\n");
+
 
         int qIMG = imgfile != NULL ? 1 : 0;
         sprintf(message, " %d ", qIMG);
@@ -425,7 +446,6 @@ void TCP_input_validation(int fd) {
             txt_size = get_filesize(txtfile);
             sprintf(message, "%s %d ", userID, txt_size);
 
-            printf("sending: ")
             write(fd, message, strlen(message));
 
             readFromFile(txtfile, message, BUF_SIZE, txt_size, fd);
@@ -442,7 +462,7 @@ void TCP_input_validation(int fd) {
             }
         }
         write(fd, "\n", 1);
-        free(txtfile);
+*/        free(txtfile);
 
     } else if (strcmp("ANS", prefix) == 0) {
         char topic[11], question[11], userID[6], * qdata, ext[4];

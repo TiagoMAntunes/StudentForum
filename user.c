@@ -21,6 +21,8 @@
 #define MAX_REQ_LEN 1024
 #define ERR_MSG     "ERR"
 #define ERR_LEN     4
+#define PREFIX      "./topics/"
+#define PREFIX_LEN  9
 #define MIN(A,B) ((A) < (B) ? (A) : (B))
 
 int topic_number = -1, question_number = -1;
@@ -97,8 +99,6 @@ int verify_ID(char *stringID) {
         return 0;
 
     return 1;
-
-
 }
 
 int topic_exists(Hash* topics_hash, char *topic) {
@@ -310,7 +310,6 @@ int get_filesize(char* filename){
     }
 
     return length;
-
 }
 
 int ndigits(int i){
@@ -441,7 +440,6 @@ void update_question_list(Hash * topics_hash, char *answer) {
         printf("%d - %s (%s)\n", ++n, question, userID);
         addEl(questions_titles, strdup(question));
     }
-
 }
 
 void freeTopics(List *topics) {
@@ -481,7 +479,17 @@ int validate_qs_as_input(char *input, int n_parts) {
     return (n == n_parts) || (n == n_parts - 1);
 }
 
-
+int getNumFromAnswer(char *answer) {
+    char *aux = strdup(answer);
+    char *token = strtok(aux, " ");
+    if (is_number(token)) {
+        int num = atoi(token);
+        free(aux);
+        return num;
+    }
+    free(aux);
+    return -1;
+}
 
 void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *res_udp) {
     char *token, *stringID;
@@ -685,18 +693,93 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     if (n == -1) exit(1);
 
                     write_TCP(fd_tcp, message, msg_size);
-                    
+               
+
                     //get answer
+                    // read QGR user ID
+                    char answer[1024];
+                    bzero(answer, 1024);
+                    int bytes_read = read(fd_tcp, answer, 10);
+                    if (bytes_read == -1) {
+                        exit(ERROR);
+                    }
+
+                    char *token = strtok(answer, " ");
+                    if (strcmp(token, "QGR") == 0) {
+                        token = strtok(NULL, " \n");
+                        if (is_number(token)) {
+                            int userID = atoi(token);
+
+                            validateDirectories(topic, question);
+
+                            bzero(answer, 1024);
+                            bytes_read = read(fd_tcp, answer, 1024);
+
+                            // sacar qsize
+                            int qsize = getNumFromAnswer(answer);
+
+                            // sacar qdata
+                            char *answer_aux = answer + ndigits(qsize) + 1;
+                            int data_read = 0;
+                            int aux_len = strlen(answer_aux);
+                            while (data_read != qsize && data_read < aux_len) {
+                                data_read++;
+                            }
+                            
+                            int append_flag = FALSE;
+                            writeTextFileNew(question, topic, answer_aux, data_read, append_flag);
+                            int total_data_writen = data_read;
+                            while (total_data_writen != qsize) {
+                                bzero(answer, 1024);
+                                answer_aux = answer;
+                                bytes_read = read(fd_tcp, answer, 1024);
+                                int data_left = qsize - total_data_writen;
+                                data_read = (data_left > bytes_read ? 1024 : data_left);
+                                total_data_writen += data_read;
+                                append_flag = TRUE;
+                                writeTextFileNew(question, topic, answer_aux, data_read, append_flag);
+                     
+                    /* DEBUGG
+                                printf("data_read = %d\n", data_read);
+                                printf("total_data_writen = %d\n", total_data_writen);
+                    */                       
+                            }
+
+                            // TODO sacar qIMG e afins
+
+                        }
+                        else if (strcmp(token, "EOF")) {
+                            printf("No such query or topic available. Try again.\n");
+                        }
+                        else if (strcmp(token, "ERR")) {
+                            printf("Invalid request.\nquestion_get question / qg question_number\n");
+                        }
+                    }
+                    else {
+                        printf("Server didn't respond. Try again.\n");
+                    }
+
+
+
+
+
+
+
+
+
+                    // TODO por aqui um while  message[len -1] != \n le e poe no buffer?
+/*
                     int n = read(fd_tcp, answer, 1024);
-                    token = strtok(answer, " ");
+                    printf("server sent: %s\n\n", answer);
+                    token = strtok(answer, " ");        // QGR
                     if (strcmp(token, "QGR") != 0) 
                         exit(EXIT_FAILURE);
 
-                    token = strtok(NULL, " ");
+                    token = strtok(NULL, " ");      // userID
                     char qUserID[6];
                     sprintf(qUserID, "%s", token);
                     
-                    token = strtok(NULL, " ");
+                    token = strtok(NULL, " ");      // qsize
                     int qsize = atoi(token);
 
                     char * aux = token + ndigits(qsize) + 1;
@@ -707,14 +790,18 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     bzero(qdata, 1024);
                     printf("Going to start first copy\n");
                     memcpy(qdata, aux, MIN(qsize, 1024 - (aux - answer)));
+
+                    printf("qdata = %s\n", qdata);
                     
                     read(fd_tcp, answer, 1); //get space
+                    printf("after 2nd send: %s\n", answer)
                     //First read is small, only until here
-                    read(fd_tcp, qdata, MIN(qsize, 1024));
+                 //   read(fd_tcp, qdata, MIN(qsize, 1024));
+              //      printf("qdata 2 = %s\n", qdata);
                     /*if (1024 - (aux - answer) < qsize)
                         read(fd_tcp, qdata + MIN(qsize, 1024 - (aux - answer)), 1024 - MIN(qsize, 1024 - (aux - answer)));
                     */
-                    int changed = 0;
+             /*       int changed = 0;
                     writeTextFile(question, topic, qdata, 1024, qsize, fd_tcp, &changed);
 
                     if (changed) {
@@ -761,13 +848,13 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     }
 
                     writeAuthorInformation(topic, question, qUserID, ext);
-
+*/
                     //TODO if reply is not 'QGR EOF' or 'QGR ERR', save question_title as currently selected question
                     close(fd_tcp);
                     free(message);
                 } 
                 else {
-                    printf("Invalid command.\nquestion_get question / reg question_number\n");
+                    printf("Invalid command.\nquestion_get question / qg question_number\n");
                 }
             }
             else {
