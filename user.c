@@ -725,25 +725,8 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                             while (data_read != qsize && data_read < aux_len) {
                                 data_read++;
                             }
-                            
-                            int append_flag = FALSE;
-                            writeTextFileNew(question, topic, answer_aux, data_read, append_flag);
-                            int total_data_writen = data_read;
-                            while (total_data_writen != qsize) {
-                                bzero(answer, 1024);
-                                answer_aux = answer;
-                                bytes_read = read(fd_tcp, answer, 1024);
-                                int data_left = qsize - total_data_writen;
-                                data_read = (data_left > bytes_read ? 1024 : data_left);
-                                total_data_writen += data_read;
-                                append_flag = TRUE;
-                                writeTextFileNew(question, topic, answer_aux, data_read, append_flag);
-                     
-                    /* DEBUGG
-                                printf("data_read = %d\n", data_read);
-                                printf("total_data_writen = %d\n", total_data_writen);
-                    */                       
-                            }
+
+                            answer_aux = readServerAndWriteToFile(question, topic, answer, answer_aux, data_read, qsize, bytes_read, fd_tcp);
 
                             // TODO sacar qIMG e afins
 

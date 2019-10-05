@@ -13,6 +13,7 @@
 #define QUESTION_LEN 12
 #define IMAGE_LEN 6
 #define EXT_LEN 3
+#define BUF_SIZE 1024
 
 #define MIN(A,B) ((A) < (B) ? (A) : (B))
 
@@ -310,7 +311,6 @@ List * getTopicQuestions(char * topic, int * list_size) {
     return list;
 }
 
-
 char * getQuestionPath(char * topic, char * question) {
     char * filename = calloc(PREFIX_LEN + strlen(topic) + strlen(question) + 2 + 12 + 1, sizeof(char));
 
@@ -341,4 +341,48 @@ char * getAnswerImagePath(char * answer_dir, char * ext) {
     char * filename = calloc(strlen(answer_dir) + 6 + strlen(ext) + 1, sizeof(char));
     sprintf(filename, "%simage.%s", answer_dir, ext);
     return filename;
+}
+
+int readTextFileAndSend(char *message, char *filename, int file_size, int *offset, int fd) {
+    int bytes_left = file_size;
+    int space_left = BUF_SIZE - (*offset) * sizeof(char);
+    int read;
+    FILE * f = fopen(filename, "r");
+    while (bytes_left != 0) {
+        read = fread(message + ((*offset) * sizeof(char)), sizeof(char), MIN(space_left, bytes_left), f);
+        space_left -= read;
+        bytes_left -= read;
+        if (bytes_left != 0) {
+            write(fd, message, BUF_SIZE);
+            bzero(message, BUF_SIZE);
+            *offset = 0;
+            space_left = BUF_SIZE;
+        }
+    }
+
+    fclose(f);
+
+    return space_left;
+}
+
+char *readServerAndWriteToFile(char *question, char *topic, char *answer, char *answer_aux, int data_read, int qsize, int bytes_read, int fd_tcp) {
+    int append_flag = 0;
+    writeTextFileNew(question, topic, answer_aux, data_read, append_flag);
+    int total_data_writen = data_read;
+    while (total_data_writen != qsize) {
+        bzero(answer, 1024);
+        answer_aux = answer;
+        bytes_read = read(fd_tcp, answer, 1024);
+        int data_left = qsize - total_data_writen;
+        data_read = (data_left > bytes_read ? 1024 : data_left);
+        total_data_writen += data_read;
+        append_flag = 1;
+        writeTextFileNew(question, topic, answer_aux, data_read, append_flag);
+
+/*  DEBUGG
+        printf("data_read = %d\n", data_read);
+        printf("total_data_writen = %d\n", total_data_writen);
+*/ 
+    }
+    return answer_aux;
 }

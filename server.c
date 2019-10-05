@@ -393,27 +393,14 @@ void TCP_input_validation(int fd) {
         char * txtfile = getQuestionPath(topic, question);
         char * imgfile = getImagePath(topic, question, ext);
         int txtfile_size = get_filesize(txtfile);
+        
+        // send QGR userID qsize qdata
         sprintf(message, "QGR %s %d ", userID, txtfile_size);
         int offset = 3 + 1 + 5 + 1 + ndigits(txtfile_size) + 1;
-        int bytes_left = txtfile_size;
-        
-
-        int space_left = BUF_SIZE - offset * sizeof(char);
-        int read;
-        FILE * f = fopen(txtfile, "r");
-        while (bytes_left != 0) {
-            read = fread(message + offset * sizeof(char), sizeof(char), MIN(space_left, bytes_left), f);
-            space_left -= read;
-            bytes_left -= read;
-            if (bytes_left != 0) {
-                write(fd, message, BUF_SIZE);
-                bzero(message, BUF_SIZE);
-                offset = 0;
-                space_left = BUF_SIZE;
-            }
-        }
-
+        int space_left = readTextFileAndSend(message, txtfile, txtfile_size, &offset, fd);
+   
         // TODO acabar de encher buffer com qIMG e afins
+        // if (space_left > 0) acabar de encher o buffer
         write(fd, message, BUF_SIZE);
 
 
