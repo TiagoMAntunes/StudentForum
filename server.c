@@ -380,13 +380,15 @@ void TCP_input_validation(int fd) {
 
         token = strtok(NULL, " \n");
         sprintf(question, "%s", token);
+
         int answers_number;
         List * answers = getAnswers(topic, question, &answers_number);
-
         Iterator * it = createIterator(answers);
         printf("Available answers:\n");
-        while (hasNext(it))
+
+        while (hasNext(it)) {
             printf("%s\n", current(next(it)));
+        }
         killIterator(it);
 
         bzero(message, BUF_SIZE);
@@ -399,6 +401,7 @@ void TCP_input_validation(int fd) {
         int offset = 3 + 1 + 5 + 1 + ndigits(txtfile_size) + 1;
         int space_left = readTextFileAndSend(message, txtfile, txtfile_size, &offset, fd);
    
+        printf("space_left = %d\n", space_left);
         offset = (space_left > 0 ? (BUF_SIZE - space_left - 1) : 0);
         if (offset == 0) {
             bzero(message, BUF_SIZE);
@@ -416,13 +419,29 @@ void TCP_input_validation(int fd) {
             int imgfile_size = get_filesize(imgfile);
             sprintf(message + offset + sizeof(char), " %d %s %d ", 1, ext, imgfile_size);
             offset += 3 + strlen(ext) + 1 + ndigits(imgfile_size) + 2;
-            printf("message = %s\noffset = %d\n", message, offset); 
 
             space_left = readTextFileAndSend(message, imgfile, imgfile_size, &offset, fd); 
+            offset = (space_left > 0 ? (BUF_SIZE - space_left - 1) : 0);
+            if (offset == 0) {
+                bzero(message, BUF_SIZE);
+            }
+        }
+        // buffer full, ready to be sent 
+        if (offset >= 1024) {
+            write(fd, message, BUF_SIZE);
+            bzero(message, BUF_SIZE);
+            offset = 0;
         }
 
-
-
+        if (answers_number > 0) {
+            sprintf(message + offset * sizeof(char), " %d", answers_number);
+            offset += 2;
+        }
+        else {
+            sprintf(message + offset * sizeof(char), " %d\n", answers_number);
+        }
+        
+        printf("sending: %s\n", message);
         write(fd, message, BUF_SIZE);
 
 

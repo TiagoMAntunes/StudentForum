@@ -480,6 +480,15 @@ int getNumFromAnswer(char *answer) {
     return -1;
 }
 
+char *verify_and_reset(char *answer, char **aux, int *bytes_read, int fd_tcp) {
+    if (*aux - answer >= 1024) {
+        bzero(answer, 1024);
+        *bytes_read = read(fd_tcp, answer, 1024);
+        *aux = answer;
+    }
+    return aux;
+}
+
 void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *res_udp) {
     char *token, *stringID;
     int n, user_exists, short_cmmd = 0;
@@ -688,7 +697,6 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     char answer[1024];
                     bzero(answer, 1024);
                     int bytes_read = read(fd_tcp, answer, 10);
-                    printf("bytes read = %d\nanswer = %s\n", bytes_read, answer);
                     if (bytes_read == -1) {
                         exit(ERROR);
                     }
@@ -716,24 +724,48 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                                 data_read++;
                             }
 
-                            int offset = readServerAndWriteToFile(question, topic, answer, answer_aux, data_read, qsize, bytes_read, fd_tcp);
-                            answer_aux +=  offset + 1;  // rremoves rest of qdata and a " "
+                            int more_than_bufsize = 0;
+                            int offset = readServerAndWriteToFile(&more_than_bufsize, question, topic, answer, answer_aux, data_read, qsize, bytes_read, fd_tcp, 0, NULL);
+                            answer_aux = answer;
                             printf("answer_aux = |%s|\n", answer_aux);
-
+                            answer_aux +=  (more_than_bufsize ? offset : offset + ndigits(qsize) + 2);  // removes rest of qdata and a " "
+                            printf("answer_aux = |%s|\n", answer_aux);
                             // if answer full, read more 
-                            if (answer_aux - answer == 1024) {
-                                bzero(answer, 1024);
-                                bytes_read = read(fd_tcp, answer, 1024);
-                                answer_aux = answer;
-                            }
+                            answer_aux = verify_and_reset(answer, &answer_aux, &bytes_read, fd_tcp);
+
 
                             // sacar qIMG
-                            int qIMG = atoi(strtok(answer_aux, " "));
+                            printf("answer_aux = |%s|\n", answer_aux);
+                            char *helper = strdup(answer_aux);
+                            int qIMG = atoi(strtok(helper, " "));
                             answer_aux += 2;  // "qIMG "
-                            
+                            answer_aux = verify_and_reset(answer, &answer_aux, &bytes_read, fd_tcp);
+                            printf("answer_aux = |%s|\n", answer_aux);
+
                             if (qIMG) {
-                                
+                                char *ext = strtok(NULL, " ");
+                                answer_aux += strlen(ext) + 1;      // "ext "
+                                printf("answer_aux = |%s|\n", answer_aux);
+                                answer_aux = verify_and_reset(answer, &answer_aux, &bytes_read, fd_tcp);
+
+                                int qisize = atoi(strtok(NULL, " "));
+                                answer_aux += ndigits(qisize) + 1;   // "qisize "
+                                answer_aux = verify_and_reset(answer, &answer_aux, &bytes_read, fd_tcp); 
+
+                                data_read = 0;
+                                aux_len = strlen(answer_aux);          
+                                while (data_read != qisize && data_read < aux_len) {
+                                    data_read++;
+                                }
+
+                                more_than_bufsize = 0;
+                                offset = readServerAndWriteToFile(&more_than_bufsize, question, topic, answer, answer_aux, data_read, qisize, bytes_read, fd_tcp, 1, ext);
                             }
+                            else {
+
+                            }
+
+                            free(helper);
 
                         }
                         else if (strcmp(token, "EOF")) {

@@ -381,28 +381,43 @@ int readTextFileAndSend(char *message, char *filename, int file_size, int *offse
     return space_left;
 }
 
-int readServerAndWriteToFile(char *question, char *topic, char *answer, char *answer_aux, int data_read, int size, int bytes_read, int fd_tcp) {
+int readServerAndWriteToFile(int *flag, char *question, char *topic, char *answer, char *answer_aux, int data_read, int size, int bytes_read, int fd_tcp, int img_flag, char* ext) {
     int append_flag = 0;
-    writeTextFileNew(question, topic, answer_aux, data_read, append_flag);
+    char *ext_aux = (ext != NULL ? strdup(ext) : NULL);
+
+    if (img_flag) {
+        writeImageFileNew(question, topic, ext_aux, answer_aux, data_read, append_flag);
+    }
+    else {
+        writeTextFileNew(question, topic, answer_aux, data_read, append_flag);
+    }
     int total_data_writen = data_read;
     while (total_data_writen != size) {
+        *flag = 1;
         bzero(answer, 1024);
         answer_aux = answer;
-        bytes_read = read(fd_tcp, answer, 1024);
         int data_left = size - total_data_writen;
+        bytes_read = read(fd_tcp, answer, 1024);
         data_read = (data_left > bytes_read ? 1024 : data_left);
         total_data_writen += data_read;
         append_flag = 1;
-        writeTextFileNew(question, topic, answer_aux, data_read, append_flag);
+        if (img_flag) {
+            writeImageFileNew(question, topic, ext_aux, answer_aux, data_read, append_flag);
+        }
+        else {
+            writeTextFileNew(question, topic, answer_aux, data_read, append_flag);
+        }
 
-/*  DEBUGG 
+/*  DEBUGG */
+    //    printf("answer = %s\n", answer);
         printf("bytes_read = %d\n", bytes_read);
         printf("data_left = %d\n", data_left);
         printf("data_read = %d\n", data_read);
-        printf("total_data_writen = %d\n\n", total_data_writen);
-*/        
- 
-}
+        printf("total_data_writen = %d\n\n", total_data_writen); 
+    }
+
+    printf("data_read = %d\n", data_read);
+    free(ext_aux);
     return data_read;
 }
 
