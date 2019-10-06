@@ -69,7 +69,7 @@ void writeTextFileNew(char *question, char *topic, char *buffer, int n_bytes, in
 }
 
 void writeImageFileNew(char *question, char *topic, char *ext, char *buffer, int n_bytes, int append_flag) {
-    char * filename = calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 5 + IMAGE_LEN , sizeof(char)); //textfilename
+    char * filename = calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 5 + IMAGE_LEN +1, sizeof(char)); //textfilename
     sprintf(filename, "%s%s/%s/image.%s", PREFIX, topic, question, ext);
 
     FILE *f = fopen(filename, (append_flag ? "a" : "w+"));

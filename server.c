@@ -411,6 +411,7 @@ void TCP_input_validation(int fd) {
         char *imgfile = getImagePath(topic, question, ext);
         printf("imgfile = %s\n", imgfile);
         if (imgfile == NULL) {
+            printf("I'm ADDING IMAGEFILE!\n");
             sprintf(message + offset + sizeof(char), " %d ", 0);
             offset += 3;
         }
