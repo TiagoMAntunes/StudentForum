@@ -298,7 +298,7 @@ void TCP_input_validation(int fd) {
     aux += 4;
     printf("Prefix: %s\n", prefix);
     if (strcmp(prefix, "QUS") == 0) {
-        char topic[11], question[11], userID[6], * qdata, ext[4];
+        char topic[11], question[11], userID[6], * qdata, ext[5];
         int qsize, qIMG, isize;
         printf("QUS inside!\n");
 
@@ -365,14 +365,15 @@ void TCP_input_validation(int fd) {
             changed = 0;
             writeImageFile(question, topic, qdata, BUF_SIZE, isize, fd, &changed, ext);
         }
+
         writeAuthorInformation(topic, question, userID, ext);
         free(qdata);
     } else if(strcmp("GQU", prefix) == 0) {
-        char topic[11], question[11], userID[6], ext[4];
+        char topic[11], question[11], userID[6], ext[5];
         bzero(topic, 11);
         bzero(question, 11);
         bzero(userID, 6);
-        bzero(ext, 4);
+        bzero(ext, 5);
 
         token = strtok(aux, " ");
         sprintf(topic, "%s", token);
@@ -391,7 +392,6 @@ void TCP_input_validation(int fd) {
         bzero(message, BUF_SIZE);
         getAuthorInformation(topic, question, userID, ext);
         char * txtfile = getQuestionPath(topic, question);
-        char * imgfile = getImagePath(topic, question, ext);
         int txtfile_size = get_filesize(txtfile);
         
         // send QGR userID qsize qdata
@@ -399,8 +399,30 @@ void TCP_input_validation(int fd) {
         int offset = 3 + 1 + 5 + 1 + ndigits(txtfile_size) + 1;
         int space_left = readTextFileAndSend(message, txtfile, txtfile_size, &offset, fd);
    
-        // TODO acabar de encher buffer com qIMG e afins
-        // if (space_left > 0) acabar de encher o buffer
+        offset = (space_left > 0 ? (BUF_SIZE - space_left - 1) : 0);
+        if (offset == 0) {
+            bzero(message, BUF_SIZE);
+        }
+
+        // send qIMG [qiext qisize qidata]
+        char *imgfile = getImagePath(topic, question, ext);
+        printf("imgfile = %s\n", imgfile);
+        if (imgfile == NULL) {
+            sprintf(message + offset + sizeof(char), " %d ", 0);
+            offset += 3;
+        }
+
+        else {
+            int imgfile_size = get_filesize(imgfile);
+            sprintf(message + offset + sizeof(char), " %d %s %d ", 1, ext, imgfile_size);
+            offset += 3 + strlen(ext) + 1 + ndigits(imgfile_size) + 2;
+            printf("message = %s\noffset = %d\n", message, offset); 
+
+            space_left = readTextFileAndSend(message, imgfile, imgfile_size, &offset, fd); 
+        }
+
+
+
         write(fd, message, BUF_SIZE);
 
 

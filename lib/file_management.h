@@ -27,7 +27,9 @@ char * getAnswerQuestionPath(char * answer_dir);
 char * getAnswerImagePath(char * answer_dir, char * ext);
 
 void writeTextFileNew(char *question, char *topic, char *buffer, int n_bytes, int append_flag);
+void writeImageFileNew(char *question, char *topic, char *ext, char *buffer, int n_bytes, int append_flag);
 int readTextFileAndSend(char *message, char *filename, int file_size, int *offset, int fd);
-char *readServerAndWriteToFile(char *question, char *topic, char *answer, char *answer_aux, int data_read, int qsize, int bytes_read, int fd_tcp);
+int readServerAndWriteToFile(char *question, char *topic, char *answer, char *answer_aux, int data_read, int qsize, int bytes_read, int fd_tcp);
+void getExtension(char * image, char * ext);
 
 #endif

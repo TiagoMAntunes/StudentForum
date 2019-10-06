@@ -12,7 +12,7 @@
 #define PREFIX_LEN 9
 #define QUESTION_LEN 12
 #define IMAGE_LEN 6
-#define EXT_LEN 3
+#define EXT_LEN 5
 #define BUF_SIZE 1024
 
 #define MIN(A,B) ((A) < (B) ? (A) : (B))
@@ -68,6 +68,17 @@ void writeTextFileNew(char *question, char *topic, char *buffer, int n_bytes, in
     fclose(f);
 }
 
+void writeImageFileNew(char *question, char *topic, char *ext, char *buffer, int n_bytes, int append_flag) {
+    char * filename = calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 5 + IMAGE_LEN , sizeof(char)); //textfilename
+    sprintf(filename, "%s%s/%s/image.%s", PREFIX, topic, question, ext);
+
+    FILE *f = fopen(filename, (append_flag ? "a" : "w+"));
+    printf("Opened: %s\n", filename);
+    fwrite(buffer, sizeof(char), n_bytes, f);
+
+    fclose(f);
+}
+
 void readFromFile(char * filename, char * buffer, int buffer_size, int total_size, int fd) {
     FILE * f = fopen(filename, "r");
     fread(buffer, buffer_size, sizeof(char), f);
@@ -89,7 +100,7 @@ void writeAuthorInformation(char * topic, char * question, char * userID, char *
     printf("%d\n", f);
     fwrite(userID, sizeof(char), 5, f);
     fwrite(" ", sizeof(char), 1, f);
-    fwrite(ext, sizeof(char), 3, f);
+    fwrite(ext, sizeof(char), 5, f);
 
     fclose(f);
     free(filename);
@@ -101,8 +112,8 @@ void getAuthorInformation(char * topic, char * question, char * userID, char * e
     FILE * f = fopen(filename, "r");
     
     fread(userID, 5, sizeof(char), f);
-    getc(f);
-    fread(ext, 3, sizeof(char), f);
+    getc(f);    // " "
+    fread(ext, 5, sizeof(char), f);
 
     fclose(f);
     free(filename);
@@ -343,15 +354,19 @@ char * getAnswerImagePath(char * answer_dir, char * ext) {
     return filename;
 }
 
+
+
 int readTextFileAndSend(char *message, char *filename, int file_size, int *offset, int fd) {
     int bytes_left = file_size;
     int space_left = BUF_SIZE - (*offset) * sizeof(char);
     int read;
+    int total_sent = 0;
     FILE * f = fopen(filename, "r");
     while (bytes_left != 0) {
         read = fread(message + ((*offset) * sizeof(char)), sizeof(char), MIN(space_left, bytes_left), f);
         space_left -= read;
         bytes_left -= read;
+        total_sent += read; /*debug*/
         if (bytes_left != 0) {
             write(fd, message, BUF_SIZE);
             bzero(message, BUF_SIZE);
@@ -360,29 +375,45 @@ int readTextFileAndSend(char *message, char *filename, int file_size, int *offse
         }
     }
 
+    printf("total_sent = %d\n", total_sent);
     fclose(f);
 
     return space_left;
 }
 
-char *readServerAndWriteToFile(char *question, char *topic, char *answer, char *answer_aux, int data_read, int qsize, int bytes_read, int fd_tcp) {
+int readServerAndWriteToFile(char *question, char *topic, char *answer, char *answer_aux, int data_read, int size, int bytes_read, int fd_tcp) {
     int append_flag = 0;
     writeTextFileNew(question, topic, answer_aux, data_read, append_flag);
     int total_data_writen = data_read;
-    while (total_data_writen != qsize) {
+    while (total_data_writen != size) {
         bzero(answer, 1024);
         answer_aux = answer;
         bytes_read = read(fd_tcp, answer, 1024);
-        int data_left = qsize - total_data_writen;
+        int data_left = size - total_data_writen;
         data_read = (data_left > bytes_read ? 1024 : data_left);
         total_data_writen += data_read;
         append_flag = 1;
         writeTextFileNew(question, topic, answer_aux, data_read, append_flag);
 
-/*  DEBUGG
+/*  DEBUGG 
+        printf("bytes_read = %d\n", bytes_read);
+        printf("data_left = %d\n", data_left);
         printf("data_read = %d\n", data_read);
-        printf("total_data_writen = %d\n", total_data_writen);
-*/ 
-    }
-    return answer_aux;
+        printf("total_data_writen = %d\n\n", total_data_writen);
+*/        
+ 
 }
+    return data_read;
+}
+
+void getExtension(char * image, char * ext) {
+    int i, j = 0;
+    for (i = 0; image[i] != '.'; i++)
+        ;
+    i++;
+    while (image[i] != '\0' && j < 5) {
+        ext[j++] = image[i++];
+    }
+    ext[j] = 0;
+}
+
