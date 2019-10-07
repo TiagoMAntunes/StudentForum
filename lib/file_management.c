@@ -58,13 +58,20 @@ void writeToFile(char * filename, char * buffer, int buffer_size, int total_size
 
 void readFromFile(char * filename, char * buffer, int buffer_size, int total_size, int fd) {
     FILE * f = fopen(filename, "r");
-    fread(buffer, buffer_size, sizeof(char), f);
+    printf("Reading from: %s\n", filename);
+    printf("I have to write: %d\n", total_size);
+    int tmp = total_size;
+    int n = fread(buffer, sizeof(char), buffer_size, f);
     while(total_size > 0) {
-        total_size -= write(fd, buffer, buffer_size);
+        total_size -= write(fd, buffer, MIN(buffer_size, n));
+        printf("wrote: %d\n", tmp - total_size);
+        printf("total size is now: %d\n", total_size);
         if (total_size > 0) {
-            fread(buffer, buffer_size, sizeof(char), f);
+            n = fread(buffer, sizeof(char), buffer_size, f);
         }
     }
+    printf("Finished writing!\n");
+    printf("Current total size: %d\n", total_size);
     fclose(f);
 }
 

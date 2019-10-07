@@ -402,16 +402,25 @@ void TCP_input_validation(int fd) {
 
         int qIMG = imgfile != NULL ? 1 : 0;
         sprintf(message, " %d ", qIMG);
-
-        write(fd, message, 3);
         if (qIMG) {
             int image_size = get_filesize(imgfile);
-            sprintf(message, "%s %d ", ext, image_size);
-            readFromFile(txtfile, message, BUF_SIZE, image_size, fd);
+            sprintf(message + 3, "%s %d ", ext, image_size);
+            write(fd, message, 3 + strlen(ext) + ndigits(image_size) + 2);
+            write(1, message, 3 + strlen(ext) + ndigits(image_size) + 2);
+            readFromFile(imgfile, message, BUF_SIZE, image_size, fd);
             free(imgfile);
         }
+        char * aux = message;
+        if (answers_number > 0){
+            sprintf(message, " %d", answers_number);
+            aux += 2;
+        }
+        else {
+            sprintf(message, " 0\n");
+            aux += 3;
+        }
         
-        sprintf(message, " %d", answers_number);
+        write (fd, message, aux - message);
         
         it = createIterator(answers);
         while (hasNext(it)) {
@@ -439,7 +448,7 @@ void TCP_input_validation(int fd) {
                 free(imgfile);
             }
         }
-        write(fd, "\n", 1);
+        
         free(txtfile);
 
     } else if (strcmp("ANS", prefix) == 0) {
@@ -711,7 +720,7 @@ int main(int argc, char *argv[])
                         }
                         killIterator(it);
                         listFree(questions_list);
-                    }
+                    } else msg_help++;
                     *(msg_help) = '\n';
                     printf("Char: %c with value %d\n", *msg_help, *msg_help);
                     printf("String: \"%s\" with size: %d\n", message, strlen(message));
