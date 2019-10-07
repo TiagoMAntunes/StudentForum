@@ -89,11 +89,25 @@ void writeAuthorInformation(char * topic, char * question, char * userID, char *
     free(filename);
 }
 
+void answerWriteAuthorInformation(char * topic, char * question, char * userID, char * ext, int answer_number) {
+    char * filename = calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 2 + 12 /* .information */ + 2 + 1, sizeof(char));
+    sprintf(filename, "%s%s/%s_%d/.information", PREFIX, topic, question, answer_number);
+    
+    FILE * f = fopen(filename, "w+");
+    printf("%d\n", f);
+    fwrite(userID, sizeof(char), 5, f);
+    fwrite(" ", sizeof(char), 1, f);
+    fwrite(ext, sizeof(char), 3, f);
+
+    fclose(f);
+    free(filename);
+}
+
 void getAuthorInformation(char * topic, char * question, char * userID, char * ext) {
     char * filename = calloc(PREFIX_LEN + strlen(topic) + strlen(question) + 2 + 12 + 1, sizeof(char));
     sprintf(filename, "%s%s/%s/.information", PREFIX, topic, question);
     FILE * f = fopen(filename, "r");
-    
+
     fread(userID, 5, sizeof(char), f);
     getc(f);
     fread(ext, 3, sizeof(char), f);

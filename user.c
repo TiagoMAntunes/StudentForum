@@ -687,7 +687,9 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     write_TCP(fd_tcp, message, msg_size);
                     
                     //get answer
-                    int n = read(fd_tcp, answer, 1024);
+                    int n;
+                    while ((n = read(fd_tcp, answer, 1024) == 0)) ;
+                    printf("Read answer: %s\n", answer);
                     token = strtok(answer, " ");
                     if (strcmp(token, "QGR") != 0) 
                         exit(EXIT_FAILURE);
@@ -702,52 +704,64 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     char * aux = token + ndigits(qsize) + 1;
 
                     validateDirectories(topic, question);
-
+                    if (aux - answer > n) {
+                        while ((n = read(fd_tcp, answer, 1024) == 0)) ;
+                        printf("Read answer: %s\n", answer);
+                        aux = answer;
+                        printf("Before doing stuff, aux is: %s\n", aux);
+                    }
                     char qdata[1024];
                     bzero(qdata, 1024);
                     printf("Going to start first copy\n");
                     memcpy(qdata, aux, MIN(qsize, 1024 - (aux - answer)));
                     
-                    read(fd_tcp, answer, 1); //get space
-                    //First read is small, only until here
-                    read(fd_tcp, qdata, MIN(qsize, 1024));
-                    /*if (1024 - (aux - answer) < qsize)
-                        read(fd_tcp, qdata + MIN(qsize, 1024 - (aux - answer)), 1024 - MIN(qsize, 1024 - (aux - answer)));
-                    */
                     int changed = 0;
                     writeTextFile(question, topic, qdata, 1024, qsize, fd_tcp, &changed);
 
                     if (changed) {
-                        read(fd_tcp, answer, 1024);
+                        while ((n = read(fd_tcp, answer, 1024)) == 0) ;
+                        printf("Read answer: %s\n", answer);
                         aux = answer + 1;
                     } else {
                         aux += qsize + 1;
                     }
-
-                    token = strtok(aux, " ") + 1;
+                    printf("After writing, aux is: %s\n", aux);
+                    token = strtok(aux, " ");
+                    if (token == NULL) {
+                        while ((n = read(fd_tcp, answer, 1024)) == 0) ;
+                        printf("Read answer: %s\n", answer);
+                        aux = answer;
+                        token = strtok(aux, " ");
+                    }
                     int qIMG = atoi(token);
                     
                     char ext[4] = {0};
                     if (qIMG) {
                         token = strtok(NULL, " ");
                         sprintf(ext, "%s", token);
-
+                        printf("Ext is: %s\n", ext);
                         token = strtok(NULL, " ");
                         int isize = atoi(token);
                         //reuse qdata for less memory
+                        if (aux - answer > n) {
+                            while ((n = read(fd_tcp, answer, 1024)) == 0) ;
+                            printf("Read answer: %s\n", answer);
+                            aux = answer;
+                            token = strtok(aux, " ");
+                        }
                         aux = token + ndigits(isize) + 1;
                         memcpy(qdata, aux, MIN(isize, 1024 - (aux - answer)));
 
                         //in case there's some space available in the buffer, fill it in to avoid bad writes
                         if (1024 - (aux - answer) < isize) {
                             printf("Sizes: %d %d\n", isize, 1024 - (aux - answer));
-                            read(fd_tcp, qdata + MIN(isize, 1024 - (aux - answer)), 1024 - MIN(isize, 1024 - (aux - answer)));
+                            while ((n = read(fd_tcp, qdata + MIN(isize, 1024 - (aux - answer)), 1024 - MIN(isize, 1024 - (aux - answer)))) == 0);
                         }
 
                         changed = 0;
                         writeImageFile(question, topic, qdata, 1024, isize, fd_tcp, &changed, ext);
                         if(changed) {
-                            read(fd_tcp, answer, 1024);
+                            while ((n = read(fd_tcp, answer, 1024)) == 0) ;
                             aux = answer + 1;
                         } else 
                             aux += isize + 1;

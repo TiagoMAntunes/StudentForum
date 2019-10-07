@@ -520,7 +520,7 @@ void TCP_input_validation(int fd) {
             answerWriteImageFile(question, topic, qdata, BUF_SIZE, isize, fd, &changed, ext, answer_number);
         }
         free(qdata);
-        writeAuthorInformation(topic, question, userID, ext);
+        answerWriteAuthorInformation(topic, question, userID, ext, answer_number);
     }
     printf("Son is finished!\n");
 
