@@ -688,8 +688,9 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     
                     //get answer
                     int n;
-                    while ((n = read(fd_tcp, answer, 1024) == 0)) ;
-                    printf("Read answer: %s\n", answer);
+                    bzero(answer, 1024);
+                    while ((n = read(fd_tcp, answer, 1024)) == 0) ;
+                    printf("First read answer: %s\n", answer);
                     token = strtok(answer, " ");
                     if (strcmp(token, "QGR") != 0) 
                         exit(EXIT_FAILURE);
@@ -704,12 +705,14 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     char * aux = token + ndigits(qsize) + 1;
 
                     validateDirectories(topic, question);
-                    if (aux - answer > n) {
+                    printf("The difference is: %d compared to %d read\n", aux - answer, n);
+                    if (aux - answer >= n) {
+                        bzero(answer, 1024);
                         while ((n = read(fd_tcp, answer, 1024) == 0)) ;
-                        printf("Read answer: %s\n", answer);
+                        printf("Second read answer: %s\n", answer);
                         aux = answer;
-                        printf("Before doing stuff, aux is: %s\n", aux);
                     }
+                    printf("Before doing stuff, aux is: %s\n", aux);
                     char qdata[1024];
                     bzero(qdata, 1024);
                     printf("Going to start first copy\n");
@@ -719,8 +722,9 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     writeTextFile(question, topic, qdata, 1024, qsize, fd_tcp, &changed);
 
                     if (changed) {
+                        bzero(answer, 1024);
                         while ((n = read(fd_tcp, answer, 1024)) == 0) ;
-                        printf("Read answer: %s\n", answer);
+                        printf("Third Read answer: %s\n", answer);
                         aux = answer + 1;
                     } else {
                         aux += qsize + 1;
@@ -728,12 +732,14 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     printf("After writing, aux is: %s\n", aux);
                     token = strtok(aux, " ");
                     if (token == NULL) {
+                        bzero(answer, 1024);
                         while ((n = read(fd_tcp, answer, 1024)) == 0) ;
-                        printf("Read answer: %s\n", answer);
+                        printf("Fourth Read answer: %s\n", answer);
                         aux = answer;
                         token = strtok(aux, " ");
                     }
                     int qIMG = atoi(token);
+                    printf("Tried to use qIMG with token: %s\n", token);
                     
                     char ext[4] = {0};
                     if (qIMG) {
@@ -745,7 +751,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                         //reuse qdata for less memory
                         if (aux - answer > n) {
                             while ((n = read(fd_tcp, answer, 1024)) == 0) ;
-                            printf("Read answer: %s\n", answer);
+                            printf("Fifth Read answer: %s\n", answer);
                             aux = answer;
                             token = strtok(aux, " ");
                         }
