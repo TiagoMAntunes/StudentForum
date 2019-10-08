@@ -767,6 +767,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                             write(1, answer, n);
                             printf("\n");
                             aux = answer;
+                            memcpy(qdata, answer, n);
                         } else {
                             printf("Offset moving!\n");
                             int offset = n - (aux - answer);
@@ -775,7 +776,8 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                                 //read what it can to the buffer
                                 while ( (n = read(fd_tcp, qdata + offset, MIN(1024 - offset, isize))) == 0 );
                         }
-
+                        printf("qdata now has: \n");
+                        write(1, qdata, 1024);
                         changed = 0;
                         writeImageFile(question, topic, qdata, 1024, isize, fd_tcp, &changed, ext);
                         if(changed) {
