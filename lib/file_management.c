@@ -200,6 +200,10 @@ int getNumberOfAnswers(char * topic, char * question) {
 
 int answerDirectoriesValidation(char * topic, char * question) {
     int answer_number = getNumberOfAnswers(topic, question) + 1;
+    return answerDirectoriesValidationWithNumber(topic, question, answer_number);
+}
+
+int answerDirectoriesValidationWithNumber(char * topic, char * question, int answer_number) {
     char * dir = calloc(PREFIX_LEN + strlen(topic) + 1 + strlen(question) * 2 + 5 + 1,sizeof(char));
     validateDirectories(topic, question);
 
@@ -341,8 +345,8 @@ char * getImagePath(char * topic, char * question, char * ext) {
 }
 
 char * getAnswerQuestionPath(char * answer_dir) {
-    char * filename = calloc(strlen(answer_dir) + 12 + 1, sizeof(char));
-    sprintf(filename, "%squestion.txt", answer_dir);
+    char * filename = calloc(strlen(answer_dir) + 10 + 1, sizeof(char));
+    sprintf(filename, "%sanswer.txt", answer_dir);
     return filename;
 }
 

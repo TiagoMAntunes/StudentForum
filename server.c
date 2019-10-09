@@ -52,10 +52,9 @@ void get_img(char* filename, char* img, int size){
 
 int get_filesize(char* filename){
     FILE* f;
-    int length;
+    int length = 0;
 
     f = fopen(filename, "r");
-
     if(f!=NULL){
         fseek(f, 0, SEEK_END);
         length = ftell(f);
@@ -408,7 +407,6 @@ void TCP_input_validation(int fd) {
             write(fd, message, 3 + strlen(ext) + ndigits(image_size) + 2);
             write(1, message, 3 + strlen(ext) + ndigits(image_size) + 2);
             readFromFile(imgfile, message, BUF_SIZE, image_size, fd);
-            free(imgfile);
         }
         char * aux = message;
         if (answers_number > 0){
@@ -423,31 +421,35 @@ void TCP_input_validation(int fd) {
         write (fd, message, aux - message);
         
         it = createIterator(answers);
+        int question_count = 1;
         while (hasNext(it)) {
             char * answer_name = current(next(it));
+            bzero(userID, 6); bzero(ext, 4);
             getAnswerInformation(answer_name, userID, ext);
-            free(txtfile);
-            free(imgfile);
+            if (txtfile != NULL) free(txtfile);
+            if (imgfile != NULL) free(imgfile);
+
             txtfile = getAnswerQuestionPath(answer_name);
             imgfile = getAnswerImagePath(answer_name, ext);
             txt_size = get_filesize(txtfile);
-            sprintf(message, "%s %d ", userID, txt_size);
+            sprintf(message, " %02d %s %d ", question_count++, userID, txt_size);
 
             write(fd, message, strlen(message));
-
+            printf("I'm gonna read from %s\n", txtfile);
             readFromFile(txtfile, message, BUF_SIZE, txt_size, fd);
 
             qIMG = imgfile != NULL ? 1 : 0;
-            sprintf(message, " %d ", qIMG);
+            sprintf(message, " %d", qIMG);
             write(fd, message, strlen(message));
 
             if (qIMG) {
                 int image_size = get_filesize(imgfile);
-                sprintf(message, "%s %d ", ext, image_size);
-                readFromFile(txtfile, message, BUF_SIZE, image_size, fd);
-                free(imgfile);
+                sprintf(message, " %s %d ", ext, image_size);
+                write(fd, message, strlen(message));
+                
             }
         }
+        write(fd, "\n", 1);
         
         free(txtfile);
 
