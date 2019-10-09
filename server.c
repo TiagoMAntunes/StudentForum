@@ -30,6 +30,7 @@
 
 char port[6] = "58017";
 
+
 void get_img(char* filename, char* img, int size){
     FILE* f;
     char buffer[size];
@@ -713,9 +714,22 @@ int main(int argc, char *argv[])
                     //populate with the amount of questions
                     if (questions_list != NULL) {
                         Iterator * it = createIterator(questions_list);
+                        char userID[6], ext[4];
+                        bzero(userID, 6);
+                        bzero(ext, 4);
                         while (j > 0) {
                             char * question = (char * ) current(next(it));
-                            sprintf(msg_help, " %s:%s:%s", question, "12345", "03");
+                            getAuthorInformation(token, question, userID, ext);
+                            int n = getNumberOfAnswers(token, question);
+                            char n_answers[3];
+                            if (n < 9) {
+                            	sprintf(n_answers, "0%d", n);
+                            }
+                            else {
+                            	sprintf(n_answers, "%d", n);
+                            }
+
+                            sprintf(msg_help, " %s:%s:%s", question, userID, n_answers);
                             msg_help += 10 + strlen(question);
                             j--;
                             free(question);

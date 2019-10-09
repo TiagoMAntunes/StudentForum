@@ -97,8 +97,6 @@ int verify_ID(char *stringID) {
         return 0;
 
     return 1;
-
-
 }
 
 int topic_exists(Hash* topics_hash, char *topic) {
@@ -310,7 +308,6 @@ int get_filesize(char* filename){
     }
 
     return length;
-
 }
 
 int ndigits(int i){
@@ -419,7 +416,7 @@ void update_question_list(Hash * topics_hash, char *answer) {
 
     int n = 0;
     while ((token = strtok(NULL, " ")) != NULL) {
-        char question[11], userID[6];
+        char question[11], userID[6], n_answers[3];
         int i = 0;
         while (token[i] != ':') {
             question[i] = token[i];
@@ -437,11 +434,20 @@ void update_question_list(Hash * topics_hash, char *answer) {
 
         token += i+1;
         userID[i] = 0;
+        i = 0;
 
-        printf("%d - %s (%s)\n", ++n, question, userID);
+        printf("token = %s\n", token);
+        while (i < 2) {
+            n_answers[i] = token[i];
+            i++;
+        }
+        
+        n_answers[i] = 0;
+
+
+        printf("%d - %s (by %s - %s answers)\n", ++n, question, userID, n_answers);
         addEl(questions_titles, strdup(question));
     }
-
 }
 
 void freeTopics(List *topics) {
@@ -692,208 +698,217 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     while ((n = read(fd_tcp, answer, 1024)) == 0) ;
                     token = strtok(answer, " ");
                     if (strcmp(token, "QGR") != 0) 
-                        exit(EXIT_FAILURE);
+                        printf("Unexpected server response.\n");
 
                     token = strtok(NULL, " ");
-                    char qUserID[6];
-                    sprintf(qUserID, "%s", token);
-                    
-                    token = strtok(NULL, " ");
-                    int qsize = atoi(token);
-
-                    char * aux = token + ndigits(qsize) + 1;
-
-                    validateDirectories(topic, question);
-                    if (aux - answer >= n) {
-                        bzero(answer, 1024);
-                        while ((n = read(fd_tcp, answer, 1024)) == 0) ;
-                        aux = answer;
+                    // verify server response
+                    if (strcmp(token, "EOF") == 0) {
+                        printf("No such query or topic available.\n");
                     }
-                    char qdata[1024];
-                    bzero(qdata, 1024);
-                    memcpy(qdata, aux, MIN(qsize, 1024 - (aux - answer)));
-                    
-                    int changed = 0;
-                    writeTextFile(question, topic, qdata, 1024, qsize, fd_tcp, &changed);
-
-                    if (changed) {
-                        bzero(answer, 1024);
-                        while ((n = read(fd_tcp, answer, 1024)) == 0) ;
-                        aux = answer + 1;
-                    } else {
-                        aux += qsize + 1;
+                    else if (strcmp(token, "ERR") == 0) {
+                        printf("Request not properly formulated.\nquestion_get question / reg question_number\n");
                     }
-                    token = strtok(aux, " ");
-                    if (token == NULL) {
-                        bzero(answer, 1024);
-                        while ((n = read(fd_tcp, answer, 1024)) == 0) ;
-                        aux = answer;
-                        token = strtok(aux, " ");
-                    }
-                    int qIMG = atoi(token);
-                    
-                    char ext[4] = {0};
-                    if (qIMG) {
+                    else {
+                        char qUserID[6];
+                        sprintf(qUserID, "%s", token);
+                        
                         token = strtok(NULL, " ");
-                        sprintf(ext, "%s", token);
-                        token = strtok(NULL, " ");
-                        int isize = atoi(token);
-                        aux = token + ndigits(isize) + 1;
-                        //reuse qdata for less memory
-                        bzero(qdata, 1024);
-                        if (aux - answer >= n) {
-                            //re-read
-                            bzero(answer, 1024);
-                            while ((n = read(fd_tcp, answer, MIN(1024, isize))) == 0) ;
-                            aux = answer;
-                            memcpy(qdata, answer, n);
-                        } else {
-                            int offset = n - (aux - answer);
-                            memcpy(qdata, aux, offset);
-                            if ( offset < isize)
-                                //read what it can to the buffer
-                                while ( (n = read(fd_tcp, qdata + offset, MIN(1024 - offset, isize))) == 0 );
-                        }
-                        changed = 0;
-                        writeImageFile(question, topic, qdata, 1024, isize, fd_tcp, &changed, ext);
-                        if(changed) {
-                            bzero(answer, 1024);
-                            while ((n = read(fd_tcp, answer, 1024)) == 0) ;
-                            aux = answer + 1;
-                        } else 
-                            aux += isize + 1;
-                    }
-                    token = strtok(aux, " ");
-                    int N = atoi(token);
-                    aux = token + strlen(token) + 1;
-                    printf("I've found: %d answers!\n", N);
-                    while (N-- > 0) {
-                        
-                        printf("Entered while with aux = %s\n", aux);
-                        if (aux - answer >= n) {
-                            bzero(answer, 1024);
-                            while ((n = read(fd_tcp, answer, 1024)) == 0) ;
-                            aux = answer;
-                        }
+                        int qsize = atoi(token);
 
-                        
-                        token = strtok(aux, " ");
-                        printf("Token is: %s; with length %d\n", token, strlen(token));
-                        int answer_number = atoi(token);
-                        printf("Answer number is now: %d\n", answer_number);
-                        aux = token + strlen(token) + 1;
-                        printf("Moved aux. It is now: %s\n", aux);
+                        char * aux = token + ndigits(qsize) + 1;
 
-                        if (aux - answer >= n) {
-                            bzero(answer, 1024);
-                            while ((n = read(fd_tcp, answer, 1024)) == 0) ;
-                            aux = answer;
-                            printf("Re-read. it is now: %s\n", aux);
-                        }
-
-                        token = strtok(aux , " ");
-                        printf("Token is: %s; with length %d\n", token, strlen(token));
-                        strcpy(qUserID, token);
-                        printf("User ID: %s\n", qUserID);
-                        printf("Token is: %s; with a strlen of %d\n", token, strlen(token));
-                        aux = token +  strlen(token) + 1;
-                        
+                        validateDirectories(topic, question);
                         if (aux - answer >= n) {
                             bzero(answer, 1024);
                             while ((n = read(fd_tcp, answer, 1024)) == 0) ;
                             aux = answer;
                         }
-                        printf("Aux is now: %s\n", aux);
-                        token = strtok(aux, " ");
-                        qsize = atoi(token);
-                        printf("Qsize is %d\n", qsize);
-                        aux += strlen(token) + 1;
-                        
-                        if (aux - answer >= n) {
-                            bzero(answer, 1024);
-                            while ((n = read(fd_tcp, answer, 1024)) == 0) ;
-                            aux = answer;
-                        }
-
-                        answerDirectoriesValidationWithNumber(topic, question, answer_number);
+                        char qdata[1024];
                         bzero(qdata, 1024);
                         memcpy(qdata, aux, MIN(qsize, 1024 - (aux - answer)));
                         
+                        int changed = 0;
+                        writeTextFile(question, topic, qdata, 1024, qsize, fd_tcp, &changed);
 
-                        if (1024 - (aux - answer) < qsize) {
-                            read(fd_tcp, qdata + MIN(qsize, 1024 - (aux - answer)), 1024 - MIN(qsize, 1024 - (aux - answer)));
-                        }
-
-                        changed = 0;
-                        answerWriteTextFile(question, topic, qdata, 1024, qsize, fd_tcp, &changed, answer_number);
-
-                        if (changed){
-                            read(fd_tcp, answer, 1024);
+                        if (changed) {
+                            bzero(answer, 1024);
+                            while ((n = read(fd_tcp, answer, 1024)) == 0) ;
                             aux = answer + 1;
-                        } else
-                            aux += qsize + 1; 
-
-                        if (aux - answer >= n) {
+                        } else {
+                            aux += qsize + 1;
+                        }
+                        token = strtok(aux, " ");
+                        if (token == NULL) {
                             bzero(answer, 1024);
                             while ((n = read(fd_tcp, answer, 1024)) == 0) ;
                             aux = answer;
-                        }
-
-                        token = strtok(aux, " ");
-                        qIMG = atoi(token);
-                        aux = token + strlen(token) + 1;
-                        
-
-                        if (qIMG) {
-                            if (aux - answer >= n) {
-                                bzero(answer, 1024);
-                                while ((n = read(fd_tcp, answer, 1024)) == 0) ;
-                                aux = answer;
-                            }
                             token = strtok(aux, " ");
-                            strcpy(ext, token);
-                            printf("Extension is now: %s\n", ext);
-                            aux = token + strlen(token) + 1;
+                        }
+                        int qIMG = atoi(token);
+                        
+                        char ext[4] = {0};
+                        if (qIMG) {
+                            token = strtok(NULL, " ");
+                            sprintf(ext, "%s", token);
+                            token = strtok(NULL, " ");
+                            int isize = atoi(token);
+                            aux = token + ndigits(isize) + 1;
+                            //reuse qdata for less memory
+                            bzero(qdata, 1024);
+                            if (aux - answer >= n) {
+                                //re-read
+                                bzero(answer, 1024);
+                                while ((n = read(fd_tcp, answer, MIN(1024, isize))) == 0) ;
+                                aux = answer;
+                                memcpy(qdata, answer, n);
+                            } else {
+                                int offset = n - (aux - answer);
+                                memcpy(qdata, aux, offset);
+                                if ( offset < isize)
+                                    //read what it can to the buffer
+                                    while ( (n = read(fd_tcp, qdata + offset, MIN(1024 - offset, isize))) == 0 );
+                            }
+                            changed = 0;
+                            writeImageFile(question, topic, qdata, 1024, isize, fd_tcp, &changed, ext);
+                            if(changed) {
+                                bzero(answer, 1024);
+                                while ((n = read(fd_tcp, answer, 1024)) == 0) ;
+                                aux = answer + 1;
+                            } else 
+                                aux += isize + 1;
+                        }
+                        token = strtok(aux, " ");
+                        int N = atoi(token);
+                        aux = token + strlen(token) + 1;
+                        printf("I've found: %d answers!\n", N);
+                        while (N-- > 0) {
+                            
+                            printf("Entered while with aux = %s\n", aux);
                             if (aux - answer >= n) {
                                 bzero(answer, 1024);
                                 while ((n = read(fd_tcp, answer, 1024)) == 0) ;
                                 aux = answer;
                             }
+
                             
                             token = strtok(aux, " ");
-                            int aisize = atoi(token);
-                            printf("Isize: %d\n", aisize);
+                            printf("Token is: %s; with length %d\n", token, strlen(token));
+                            int answer_number = atoi(token);
+                            printf("Answer number is now: %d\n", answer_number);
                             aux = token + strlen(token) + 1;
+                            printf("Moved aux. It is now: %s\n", aux);
 
                             if (aux - answer >= n) {
                                 bzero(answer, 1024);
                                 while ((n = read(fd_tcp, answer, 1024)) == 0) ;
                                 aux = answer;
+                                printf("Re-read. it is now: %s\n", aux);
                             }
-                            printf("\n\n\n----------------AUX CONTENT---------------\n");
-                            write(1, aux, 1024);
-                            printf("\n-----------------------------------------");
+
+                            token = strtok(aux , " ");
+                            printf("Token is: %s; with length %d\n", token, strlen(token));
+                            strcpy(qUserID, token);
+                            printf("User ID: %s\n", qUserID);
+                            printf("Token is: %s; with a strlen of %d\n", token, strlen(token));
+                            aux = token +  strlen(token) + 1;
+                            
+                            if (aux - answer >= n) {
+                                bzero(answer, 1024);
+                                while ((n = read(fd_tcp, answer, 1024)) == 0) ;
+                                aux = answer;
+                            }
+                            printf("Aux is now: %s\n", aux);
+                            token = strtok(aux, " ");
+                            qsize = atoi(token);
+                            printf("Qsize is %d\n", qsize);
+                            aux += strlen(token) + 1;
+                            
+                            if (aux - answer >= n) {
+                                bzero(answer, 1024);
+                                while ((n = read(fd_tcp, answer, 1024)) == 0) ;
+                                aux = answer;
+                            }
+
+                            answerDirectoriesValidationWithNumber(topic, question, answer_number);
                             bzero(qdata, 1024);
-                            memcpy(qdata, aux, MIN(qsize, aux - answer));
+                            memcpy(qdata, aux, MIN(qsize, 1024 - (aux - answer)));
                             
 
                             if (1024 - (aux - answer) < qsize) {
                                 read(fd_tcp, qdata + MIN(qsize, 1024 - (aux - answer)), 1024 - MIN(qsize, 1024 - (aux - answer)));
                             }
 
-                            printf("\n\n\n----------------QDATA CONTENT----------------\n");
-                            write(1, qdata, 1024);
-                            printf("--------------------------------------------");
                             changed = 0;
-                            answerWriteImageFile(question, topic, qdata, 1024, aisize, fd_tcp, &changed, ext, answer_number);
+                            answerWriteTextFile(question, topic, qdata, 1024, qsize, fd_tcp, &changed, answer_number);
+
+                            if (changed){
+                                read(fd_tcp, answer, 1024);
+                                aux = answer + 1;
+                            } else
+                                aux += qsize + 1; 
+
+                            if (aux - answer >= n) {
+                                bzero(answer, 1024);
+                                while ((n = read(fd_tcp, answer, 1024)) == 0) ;
+                                aux = answer;
+                            }
+
+                            token = strtok(aux, " ");
+                            qIMG = atoi(token);
+                            aux = token + strlen(token) + 1;
+                            
+
+                            if (qIMG) {
+                                if (aux - answer >= n) {
+                                    bzero(answer, 1024);
+                                    while ((n = read(fd_tcp, answer, 1024)) == 0) ;
+                                    aux = answer;
+                                }
+                                token = strtok(aux, " ");
+                                strcpy(ext, token);
+                                printf("Extension is now: %s\n", ext);
+                                aux = token + strlen(token) + 1;
+                                if (aux - answer >= n) {
+                                    bzero(answer, 1024);
+                                    while ((n = read(fd_tcp, answer, 1024)) == 0) ;
+                                    aux = answer;
+                                }
+                                
+                                token = strtok(aux, " ");
+                                int aisize = atoi(token);
+                                printf("Isize: %d\n", aisize);
+                                aux = token + strlen(token) + 1;
+
+                                if (aux - answer >= n) {
+                                    bzero(answer, 1024);
+                                    while ((n = read(fd_tcp, answer, 1024)) == 0) ;
+                                    aux = answer;
+                                }
+                                printf("\n\n\n----------------AUX CONTENT---------------\n");
+                                write(1, aux, 1024);
+                                printf("\n-----------------------------------------");
+                                bzero(qdata, 1024);
+                                memcpy(qdata, aux, MIN(qsize, aux - answer));
+                                
+
+                                if (1024 - (aux - answer) < qsize) {
+                                    read(fd_tcp, qdata + MIN(qsize, 1024 - (aux - answer)), 1024 - MIN(qsize, 1024 - (aux - answer)));
+                                }
+
+                                printf("\n\n\n----------------QDATA CONTENT----------------\n");
+                                write(1, qdata, 1024);
+                                printf("--------------------------------------------");
+                                changed = 0;
+                                answerWriteImageFile(question, topic, qdata, 1024, aisize, fd_tcp, &changed, ext, answer_number);
+                            }
                         }
+
+                        writeAuthorInformation(topic, question, qUserID, ext);
+
+                        //TODO if reply is not 'QGR EOF' or 'QGR ERR', save question_title as currently selected question
+                        close(fd_tcp);
+                        free(message);
                     }
-
-                    writeAuthorInformation(topic, question, qUserID, ext);
-
-                    //TODO if reply is not 'QGR EOF' or 'QGR ERR', save question_title as currently selected question
-                    close(fd_tcp);
-                    free(message);
                 } 
                 else {
                     printf("Invalid command.\nquestion_get question / reg question_number\n");
