@@ -18,12 +18,13 @@
 #include "lib/question.h"
 #include "lib/answer.h"
 
-#define ERROR       1
-#define MAX_TOPICS  10
-#define MAX_REQ_LEN 1024
-#define ERR_MSG     "ERR"
-#define ERR_LEN     4
-#define BUF_SIZE    1024
+#define ERROR       	1
+#define MAX_TOPICS 		99
+#define MAX_QUESTIONS	99
+#define MAX_REQ_LEN 	1024
+#define ERR_MSG     	"ERR"
+#define ERR_LEN     	4
+#define BUF_SIZE    	1024
 
 #define MIN(A,B) ((A) < (B) ? (A) : (B))
 #define max(x, y) (x > y ? x : y)
@@ -290,10 +291,12 @@ int ndigits(int i){
 void TCP_input_validation(int fd) {
     char message[BUF_SIZE], prefix[4];
     char * aux = message, * token;
-    int n;
+
     bzero(message, BUF_SIZE);
     bzero(prefix, 4);
-    n = read(fd, message, BUF_SIZE);
+    if (read(fd, message, BUF_SIZE) == -1) {
+    	exit(ERROR);
+    }
     printf("Message: %s\n", message);
     memcpy(prefix, aux, 3);
     aux += 4;
@@ -314,60 +317,68 @@ void TCP_input_validation(int fd) {
         token = strtok(NULL, " ");
         sprintf(topic, "%s", token);
 
-        token = strtok(NULL, " ");
-        sprintf(question, "%s", token);
+        int n_questions = getNumberOfQuestions(topic);
+        if (n_questions < MAX_QUESTIONS) {
 
-        token = strtok(NULL, " ");
-        qsize = atoi(token);
+	        token = strtok(NULL, " ");
+	        sprintf(question, "%s", token);
 
-        aux = token + ndigits(qsize) + 1;
+	        token = strtok(NULL, " ");
+	        qsize = atoi(token);
 
-        validateDirectories(topic, question);
+	        aux = token + ndigits(qsize) + 1;
 
-        qdata = calloc(BUF_SIZE, sizeof(char));
-        
-        //sprintf(qdata, "%s", aux);
-        memcpy(qdata, aux, MIN(qsize, BUF_SIZE - (aux - message)));
+	        validateDirectories(topic, question);	// TODO se ja exite, entao QUR DUP
 
-        //in case there's some space available in the buffer, fill it in to avoid bad writes
-        if (BUF_SIZE - (aux - message) < qsize)
-            read(fd, qdata + MIN(qsize, BUF_SIZE - (aux - message)), BUF_SIZE - MIN(qsize, BUF_SIZE - (aux - message)));
+	        qdata = calloc(BUF_SIZE, sizeof(char));
+	        
+	        //sprintf(qdata, "%s", aux);
+	        memcpy(qdata, aux, MIN(qsize, BUF_SIZE - (aux - message)));
 
-        int changed = 0;
-        writeTextFile(question, topic, qdata, BUF_SIZE, qsize, fd, &changed);
+	        //in case there's some space available in the buffer, fill it in to avoid bad writes
+	        if (BUF_SIZE - (aux - message) < qsize)
+	            read(fd, qdata + MIN(qsize, BUF_SIZE - (aux - message)), BUF_SIZE - MIN(qsize, BUF_SIZE - (aux - message)));
 
-        if (changed){
-            read(fd, message, BUF_SIZE);
-            aux = message + 1;
-        } else
-            aux += qsize + 1; 
-        
-        
-        token = strtok(aux, " ");
-        qIMG = atoi(token);
-        
-        if (qIMG) {
-            token = strtok(NULL, " ");
-            sprintf(ext, "%s", token);
+	        int changed = 0;
+	        writeTextFile(question, topic, qdata, BUF_SIZE, qsize, fd, &changed);
 
-            token = strtok(NULL, " ");
-            isize = atoi(token);
-            printf("Prepare to write: %d\n", isize);
-            //reuse qdata for less memory
-            aux = token + ndigits(isize) + 1;
-            memcpy(qdata, aux, MIN(isize, BUF_SIZE - (aux - message)));
+	        if (changed){
+	            read(fd, message, BUF_SIZE);
+	            aux = message + 1;
+	        } else
+	            aux += qsize + 1; 
+	        
+	        
+	        token = strtok(aux, " ");
+	        qIMG = atoi(token);
+	        
+	        if (qIMG) {
+	            token = strtok(NULL, " ");
+	            sprintf(ext, "%s", token);
 
-            //in case there's some space available in the buffer, fill it in to avoid bad writes
-            if (BUF_SIZE - (aux - message) < isize) {
-                printf("Sizes: %d %d\n", isize, BUF_SIZE - (aux - message));
-                read(fd, qdata + MIN(isize, BUF_SIZE - (aux - message)), BUF_SIZE - MIN(isize, BUF_SIZE - (aux - message)));
-            }
+	            token = strtok(NULL, " ");
+	            isize = atoi(token);
+	            printf("Prepare to write: %d\n", isize);
+	            //reuse qdata for less memory
+	            aux = token + ndigits(isize) + 1;
+	            memcpy(qdata, aux, MIN(isize, BUF_SIZE - (aux - message)));
 
-            changed = 0;
-            writeImageFile(question, topic, qdata, BUF_SIZE, isize, fd, &changed, ext);
-        }
-        writeAuthorInformation(topic, question, userID, ext);
-        free(qdata);
+	            //in case there's some space available in the buffer, fill it in to avoid bad writes
+	            if (BUF_SIZE - (aux - message) < isize) {
+	                printf("Sizes: %d %ld\n", isize, BUF_SIZE - (aux - message));
+	                read(fd, qdata + MIN(isize, BUF_SIZE - (aux - message)), BUF_SIZE - MIN(isize, BUF_SIZE - (aux - message)));
+	            }
+
+	            changed = 0;
+	            writeImageFile(question, topic, qdata, BUF_SIZE, isize, fd, &changed, ext);
+	        }
+	        writeAuthorInformation(topic, question, userID, ext);
+	        write(fd, "QUR OK\n", 7);
+	        free(qdata);
+	    }
+	    else {
+	    	write(fd, "QUR FUL\n", 8);
+	    }
     } else if(strcmp("GQU", prefix) == 0) {
         char topic[11], question[11], userID[6], ext[4];
         bzero(topic, 11);
@@ -515,7 +526,7 @@ void TCP_input_validation(int fd) {
 
             //in case there's some space available in the buffer, fill it in to avoid bad writes
             if (BUF_SIZE - (aux - message) < isize) {
-                printf("Sizes: %d %d\n", isize, BUF_SIZE - (aux - message));
+                printf("Sizes: %d %ld\n", isize, BUF_SIZE - (aux - message));
                 read(fd, qdata + MIN(isize, BUF_SIZE - (aux - message)), BUF_SIZE - MIN(isize, BUF_SIZE - (aux - message)));
             }
 
@@ -585,7 +596,6 @@ int main(int argc, char *argv[])
 
                     int msg_size = MAX_REQ_LEN;
                     char * message = calloc(msg_size, sizeof(char));
-                    int reply_len;
 
                     /*msg_size = read_TCP(newfd, &message, msg_size, 0);
                     printf("Message received: %s\n", message);*/
@@ -739,7 +749,7 @@ int main(int argc, char *argv[])
                     } else msg_help++;
                     *(msg_help) = '\n';
                     printf("Char: %c with value %d\n", *msg_help, *msg_help);
-                    printf("String: \"%s\" with size: %d\n", message, strlen(message));
+                    printf("String: \"%s\" with size: %ld\n", message, strlen(message));
                     n = sendto(fd_udp, message, strlen(message), 0, (struct sockaddr *) &user_addr, user_addrlen);
 
                 }

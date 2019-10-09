@@ -313,14 +313,34 @@ List * getTopicQuestions(char * topic, int * list_size) {
     *list_size = 0;
     while((de = readdir(dir)) != NULL)
         if (!strstr(de->d_name, ".") && !strstr(de->d_name, "..")) {
-                printf("Found Question: %s\n", de->d_name);
-                (*list_size)++;
-                addEl(list, strdup(de->d_name));
-            }
+            printf("Found Question: %s\n", de->d_name);
+            (*list_size)++;
+            addEl(list, strdup(de->d_name));
+        }
 
     closedir(dir);
     free(dir_name);
     return list;
+}
+
+int getNumberOfQuestions(char *topic) {
+    struct dirent * de;
+    char * dir_name = calloc(PREFIX_LEN + strlen(topic) + 1, sizeof(char));
+    sprintf(dir_name, "%s%s", PREFIX, topic);
+    printf("Opening: %s\n", dir_name);
+    DIR * dir = opendir(dir_name);
+
+    if (dir == NULL) return 0;
+
+    int list_size = 0;
+    while((de = readdir(dir)) != NULL)
+        if (!strstr(de->d_name, ".") && !strstr(de->d_name, "..")) {
+            list_size++;
+        }
+
+    closedir(dir);
+    free(dir_name);
+    return list_size;
 }
 
 

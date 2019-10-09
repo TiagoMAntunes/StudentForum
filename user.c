@@ -234,6 +234,32 @@ int receive_LTR_LQR(char *answer, char *text) {
     return 1;
 }
 
+void receive_QUR(char *answer) {
+    char *token;
+
+    token = strtok(answer, " ");
+    if (strcmp(token, "QUR") != 0)
+        printf("Unexpected server response.\n");
+
+    else {
+        token = strtok(NULL, " \n");
+        if (strcmp(token, "OK") == 0) {
+            printf("Question sucessfully submitted.\n");
+        }
+        else if (strcmp(token, "NOK") == 0) {
+            printf("Submission not successful\n");
+        }
+        else if (strcmp(token, "FUL") == 0) {
+            printf("Question list is full. Question not submitted.\n");
+        }
+        else if (strcmp(token, "DUP") == 0) {
+            printf("Question already exists. Question not submitted.\n");
+        }
+        else
+            printf("Unexpected server response.\n");       
+    }
+}
+
 int read_TCP(int fd, char** full_msg, int msg_size, int current_offset){
     int n = read(fd, *full_msg + current_offset, msg_size - current_offset);
     int c;
@@ -792,7 +818,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
                             
                             token = strtok(aux, " ");
-                            printf("Token is: %s; with length %d\n", token, strlen(token));
+                            printf("Token is: %s; with length %ld\n", token, strlen(token));
                             int answer_number = atoi(token);
                             printf("Answer number is now: %d\n", answer_number);
                             aux = token + strlen(token) + 1;
@@ -806,10 +832,10 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                             }
 
                             token = strtok(aux , " ");
-                            printf("Token is: %s; with length %d\n", token, strlen(token));
+                            printf("Token is: %s; with length %ld\n", token, strlen(token));
                             strcpy(qUserID, token);
                             printf("User ID: %s\n", qUserID);
-                            printf("Token is: %s; with a strlen of %d\n", token, strlen(token));
+                            printf("Token is: %s; with a strlen of %ld\n", token, strlen(token));
                             aux = token +  strlen(token) + 1;
                             
                             if (aux - answer >= n) {
@@ -984,7 +1010,15 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 n = connect(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
                 if (n == -1) exit(1);
 
+                //send request
                 write_TCP(fd_tcp, message, msg_size);
+
+                //receive answer
+                if (read(fd_tcp, answer, 1024) == -1) {
+                    exit(ERROR);
+                }
+                receive_QUR(answer);
+
                 close(fd_tcp);
                 free(text_file);
                 free(submit_question);
