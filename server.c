@@ -533,6 +533,8 @@ void TCP_input_validation(int fd) {
                 sprintf(message, " %s %d ", ext, image_size);
                 write(fd, message, strlen(message));
                 
+                readFromFile(imgfile, message, BUF_SIZE, image_size, fd);
+                
             }
         }
         write(fd, "\n", 1);

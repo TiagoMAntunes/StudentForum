@@ -809,7 +809,6 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                         printf("I've found: %d answers!\n", N);
                         while (N-- > 0) {
                             
-                            printf("Entered while with aux = %s\n", aux);
                             if (aux - answer >= n) {
                                 bzero(answer, 1024);
                                 while ((n = read(fd_tcp, answer, 1024)) == 0) ;
@@ -914,11 +913,11 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                                 write(1, aux, 1024);
                                 printf("\n-----------------------------------------");
                                 bzero(qdata, 1024);
-                                memcpy(qdata, aux, MIN(qsize, aux - answer));
+                                memcpy(qdata, aux, MIN(aisize, 1024 - (aux - answer)));
                                 
 
-                                if (1024 - (aux - answer) < qsize) {
-                                    read(fd_tcp, qdata + MIN(qsize, 1024 - (aux - answer)), 1024 - MIN(qsize, 1024 - (aux - answer)));
+                                if (1024 - (aux - answer) < aisize) {
+                                    read(fd_tcp, qdata + MIN(aisize, 1024 - (aux - answer)), 1024 - MIN(aisize, 1024 - (aux - answer)));
                                 }
 
                                 printf("\n\n\n----------------QDATA CONTENT----------------\n");
@@ -926,7 +925,9 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                                 printf("--------------------------------------------");
                                 changed = 0;
                                 answerWriteImageFile(question, topic, qdata, 1024, aisize, fd_tcp, &changed, ext, answer_number);
+                                n = 0;
                             }
+                            answerWriteAuthorInformation(topic, question, qUserID, ext, answer_number);
                         }
 
                         writeAuthorInformation(topic, question, qUserID, ext);
