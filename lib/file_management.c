@@ -24,7 +24,7 @@ FILE * getQuestionImage(Topic * topic, char * question) {
     return NULL;
 }
 
-void validateDirectories(char * topic, char * question) {
+int validateDirectories(char * topic, char * question) {
     char * dir = calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 3,sizeof(char));
     struct stat sb;
 
@@ -32,14 +32,18 @@ void validateDirectories(char * topic, char * question) {
     if (stat(dir, &sb) == -1) {
         printf("Directories missing. Creating...\n");
 
-        int check = mkdir(PREFIX, 0700);
+        mkdir(PREFIX, 0700);
 
         sprintf(dir, "%s%s/", PREFIX, topic);
-        check = mkdir(dir, 0700);
+        mkdir(dir, 0700);
 
         sprintf(dir, "%s%s/%s/", PREFIX, topic, question);
-        check = mkdir(dir, 0700);
+        if (mkdir(dir, 0700) < 0)
+            return 0;
+
+        return 1;
     }
+    return 0;
 }
 
 void writeToFile(char * filename, char * buffer, int buffer_size, int total_size, int fd, int * changed) {

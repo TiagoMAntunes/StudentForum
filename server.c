@@ -32,6 +32,7 @@
 char port[6] = "58017";
 
 
+
 void get_img(char* filename, char* img, int size){
     FILE* f;
     char buffer[size];
@@ -67,7 +68,6 @@ int get_filesize(char* filename){
     }
 
     return length;
-
 }
 
 int create_TCP(char* hostname, struct addrinfo hints, struct addrinfo **res) {
@@ -194,7 +194,6 @@ int list_topics(List* topics, int n_topics, char *list) {
     list[t++] = '\0';
     killIterator(it);
     return t;
-
 }
 
 int read_TCP(int fd, char** full_msg, int msg_size, int current_offset){
@@ -300,11 +299,9 @@ int ndigits(int i){
 	    return token == NULL;
 	}	
 
+	// validates QUS userID topic question qsize
 	int validate_QUS(char *msg) {
 		char *aux = strdup(msg);
-		int msg_len = 0;
-		while (msg_len < 1024 && msg[msg_len] != '\n') 
-			msg_len++;
 
 		char *token = strtok(aux, " ");
 		if (token == NULL || strcmp(token, "QUS") != 0) {
@@ -326,16 +323,12 @@ int ndigits(int i){
 			return 0;
 		}
 
-		int topic_len = strlen(token);
-
 		// question
 		token = strtok(NULL, " ");
 		if (token == NULL || strlen(token) > 10) {
 			free(aux);
 			return 0;
 		}
-
-		int question_len = strlen(token);
 
 		// qsize
 		token = strtok(NULL, " ");
@@ -344,12 +337,13 @@ int ndigits(int i){
 			return 0;
 		}
 
-		if (msg_len < 1024) {
-			// TODO validate rest of msg if len(msg) < 1024 otherwise validate in main function
-		}
-
-
 		free(aux);
+		return 1;
+	}
+
+	// validate qIMG [iext isize]
+	int validate_extra_QUS(char *msg) {
+		// TODO finish this
 		return 1;
 	}
 
@@ -380,70 +374,82 @@ void TCP_input_validation(int fd) {
 	        bzero(userID, 6);
 	        bzero(ext, 4);
 
+	        // userID
 	        token = strtok(aux, " ");
 	        sprintf(userID, "%s",token);
 
+	    	// topic
 	        token = strtok(NULL, " ");
 	        sprintf(topic, "%s", token);
 
 	        int n_questions = getNumberOfQuestions(topic);
 	        if (n_questions < MAX_QUESTIONS) {
 
+	        	// question
 		        token = strtok(NULL, " ");
 		        sprintf(question, "%s", token);
 
+		        // qsize
 		        token = strtok(NULL, " ");
 		        qsize = atoi(token);
 
 		        aux = token + ndigits(qsize) + 1;
 
-		        validateDirectories(topic, question);	// TODO se ja exite, entao QUR DUP
+		        if (validateDirectories(topic, question)) {	
 
-		        qdata = calloc(BUF_SIZE, sizeof(char));
-		        
-		        //sprintf(qdata, "%s", aux);
-		        memcpy(qdata, aux, MIN(qsize, BUF_SIZE - (aux - message)));
+			        qdata = calloc(BUF_SIZE, sizeof(char));
+			        
+			        //sprintf(qdata, "%s", aux);
+			        memcpy(qdata, aux, MIN(qsize, BUF_SIZE - (aux - message)));
 
-		        //in case there's some space available in the buffer, fill it in to avoid bad writes
-		        if (BUF_SIZE - (aux - message) < qsize)
-		            read(fd, qdata + MIN(qsize, BUF_SIZE - (aux - message)), BUF_SIZE - MIN(qsize, BUF_SIZE - (aux - message)));
+			        //in case there's some space available in the buffer, fill it in to avoid bad writes
+			        if (BUF_SIZE - (aux - message) < qsize)
+			            read(fd, qdata + MIN(qsize, BUF_SIZE - (aux - message)), BUF_SIZE - MIN(qsize, BUF_SIZE - (aux - message)));
 
-		        int changed = 0;
-		        writeTextFile(question, topic, qdata, BUF_SIZE, qsize, fd, &changed);
+			        int changed = 0;
+			        writeTextFile(question, topic, qdata, BUF_SIZE, qsize, fd, &changed);
 
-		        if (changed){
-		            read(fd, message, BUF_SIZE);
-		            aux = message + 1;
-		        } else
-		            aux += qsize + 1; 
-		        
-		        
-		        token = strtok(aux, " ");
-		        qIMG = atoi(token);
-		        
-		        if (qIMG) {
-		            token = strtok(NULL, " ");
-		            sprintf(ext, "%s", token);
+			        if (changed){
+			            read(fd, message, BUF_SIZE);
+			            aux = message + 1;
+			        } else
+			            aux += qsize + 1; 
+			        
+			        if (validate_extra_QUS(aux)) {
+				        token = strtok(aux, " ");
+				        qIMG = atoi(token);
+				        if (qIMG) {
+				            token = strtok(NULL, " ");
+				            sprintf(ext, "%s", token);
 
-		            token = strtok(NULL, " ");
-		            isize = atoi(token);
-		            printf("Prepare to write: %d\n", isize);
-		            //reuse qdata for less memory
-		            aux = token + ndigits(isize) + 1;
-		            memcpy(qdata, aux, MIN(isize, BUF_SIZE - (aux - message)));
+				            token = strtok(NULL, " ");
+				            isize = atoi(token);
+				            printf("Prepare to write: %d\n", isize);
+				            //reuse qdata for less memory
+				            aux = token + ndigits(isize) + 1;
+				            memcpy(qdata, aux, MIN(isize, BUF_SIZE - (aux - message)));
 
-		            //in case there's some space available in the buffer, fill it in to avoid bad writes
-		            if (BUF_SIZE - (aux - message) < isize) {
-		                printf("Sizes: %d %ld\n", isize, BUF_SIZE - (aux - message));
-		                read(fd, qdata + MIN(isize, BUF_SIZE - (aux - message)), BUF_SIZE - MIN(isize, BUF_SIZE - (aux - message)));
-		            }
+				            //in case there's some space available in the buffer, fill it in to avoid bad writes
+				            if (BUF_SIZE - (aux - message) < isize) {
+				                printf("Sizes: %d %ld\n", isize, BUF_SIZE - (aux - message));
+				                read(fd, qdata + MIN(isize, BUF_SIZE - (aux - message)), BUF_SIZE - MIN(isize, BUF_SIZE - (aux - message)));
+				            }
 
-		            changed = 0;
-		            writeImageFile(question, topic, qdata, BUF_SIZE, isize, fd, &changed, ext);
-		        }
-		        writeAuthorInformation(topic, question, userID, ext);
-		        write(fd, "QUR OK\n", 7);
-		        free(qdata);
+				            changed = 0;
+				            writeImageFile(question, topic, qdata, BUF_SIZE, isize, fd, &changed, ext);
+				        }
+				        writeAuthorInformation(topic, question, userID, ext);
+				        write(fd, "QUR OK\n", 7);
+				        free(qdata);
+				    }
+				    else {
+				    	// TODO apagar diretorias criadas
+				    	write(fd, "QUR NOK\n", 8);
+				    }
+			    }
+			    else {
+			    	write(fd, "QUR DUP\n", 8);
+			    }
 		    }
 			else {
 	    		write(fd, "QUR FUL\n", 8);
