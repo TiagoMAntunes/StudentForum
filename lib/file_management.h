@@ -8,6 +8,7 @@
 // Topic
 List * getTopicQuestions(char * dir_name, int* list_size);
 int getNumberOfQuestions(char *topic);
+void createTopicDir(char *topic);
 
 // Question
 void createQuestion(char * topic, char * question, char * text, int text_size, char * image, int image_size, char * ext);
@@ -30,7 +31,7 @@ char * getAnswerImagePath(char * answer_dir, char * ext);
 
 // General
 int validateDirectories(char * topic, char * question);
-int fileExists(char *filename, int text);
+int fileExists(char *filename);
 void writeTextFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed);
 void writeImageFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed, char * ext);
 void writeAuthorInformation(char * topic, char * question, char * userID, char * ext);

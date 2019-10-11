@@ -24,15 +24,15 @@ FILE * getQuestionImage(Topic * topic, char * question) {
     return NULL;
 }
 
-int fileExists(char *filename, int text) {
+int fileExists(char *filename) {
     struct stat sb;
-    if (text) {
-        char complete_name[strlen(filename) + 5];   // filename.txt\0
-        sprintf(complete_name, "%s.txt", filename);
-        filename = complete_name;
-    }
-
     return (stat(filename, &sb) == 0);
+}
+
+void createTopicDir(char *topic) {
+    char *dir = calloc(PREFIX_LEN + strlen(topic) + 1,sizeof(char));
+    sprintf(dir, "%s%s/", PREFIX, topic);
+    mkdir(dir, 0700);
 }
 
 int validateDirectories(char * topic, char * question) {

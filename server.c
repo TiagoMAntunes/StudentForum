@@ -254,9 +254,15 @@ int ndigits(int i){
 
 // PROTOCOL VALIDATION
 	int validate_REG(char *msg) {
-	    char *token = strtok(msg, " "); // REG
-	    token = strtok(NULL, " "); //ID
+		if (msg[strlen(msg) - 1] != '\n')
+			return 0;
 
+	    char *token = strtok(msg, " \n"); // REG
+	    if (token == NULL) {
+	    	return 0;
+	    }
+
+	    token = strtok(NULL, " "); 	// userID
 	    if (token == NULL) {
 	        return 0;
 	    }
@@ -265,37 +271,54 @@ int ndigits(int i){
 	}
 
 	int validate_LTP(char *msg) {
-	    char *token = strtok(msg, " "); // LTP
-	    token = strtok(NULL, " ");
+		if (msg[strlen(msg) - 1] != '\n')
+			return 0;
+
+	    char *token = strtok(msg, " \n"); // LTP
+	    if (token == NULL) 
+	    	return 0;
+
+	    token = strtok(NULL, " "); 	// nothing more
 
 	    return token == NULL;
 	}
 
 	int validate_PTP(char *msg) {
-	    char *token = strtok(msg, " "); //PTP
-	    token = strtok(NULL, " ");  // ID
+		if (msg[strlen(msg) - 1] != '\n')
+			return 0;
 
+	    char *token = strtok(msg, " \n");  // PTP
+	    if (token == NULL) {
+	    	return 0;
+	    }
+
+	    token = strtok(NULL, " "); 	// userID
 	    if (token == NULL || !verify_ID(token)) {
 	        return 0;
 	    }
 
-	    token = strtok(NULL, " ");
+	    token = strtok(NULL, " ");	// topic
 	    if (token == NULL || strlen(token) > 10)
 	        return 0;
 
-	    token = strtok(NULL, " ");
+	    token = strtok(NULL, " ");	// nothing more
 
 	    return token == NULL;
 	}
 
-	int validate_LQU(char *msg) {      
-	    char *token = strtok(msg, " "); // LQU
+	int validate_LQU(char *msg) {   
+		if (msg[strlen(msg) - 1] != '\n')
+			return 0;   
 
-	    token = strtok(NULL, " ");
+	    char *token = strtok(msg, " \n"); // LQU
+	    if (token == NULL) 
+	    	return 0;
+
+	    token = strtok(NULL, " "); // topic
 	    if (token == NULL || strlen(token) > 10)
 	        return 0;
 
-	    token = strtok(NULL, " ");
+	    token = strtok(NULL, " ");	// nothing more
 	    return token == NULL;
 	}	
 
@@ -303,35 +326,35 @@ int ndigits(int i){
 	int validate_QUS(char *msg) {
 		char *aux = strdup(msg);
 
-		char *token = strtok(aux, " ");
+		char *token = strtok(aux, " ");	// QUS
 		if (token == NULL || strcmp(token, "QUS") != 0) {
 			free(aux);
 			return 0;
 		}
 
 		//userID
-		token = strtok(NULL, " ");
+		token = strtok(NULL, " "); 	// userID
 		if (token == NULL || !verify_ID(token)) {
 			free(aux);
 			return 0;
 		}
 
 		// topic
-		token = strtok(NULL, " ");
+		token = strtok(NULL, " ");	// topic
 		if (token == NULL || strlen(token) > 10) {
 			free(aux);
 			return 0;
 		}
 
 		// question
-		token = strtok(NULL, " ");
+		token = strtok(NULL, " ");	// question
 		if (token == NULL || strlen(token) > 10) {
 			free(aux);
 			return 0;
 		}
 
 		// qsize
-		token = strtok(NULL, " ");
+		token = strtok(NULL, " "); 	// qsize
 		if (token == NULL || !is_number(token)) {
 			free(aux);
 			return 0;
@@ -395,6 +418,7 @@ void TCP_input_validation(int fd) {
     printf("Prefix: %s\n", prefix);
     if (strcmp(prefix, "QUS") == 0) {
     	if (validate_QUS(message)) {
+    		printf("after validation\n");
 	        char topic[11], question[11], userID[6], * qdata, ext[4];
 	        int qsize, qIMG, isize;
 	        printf("QUS inside!\n");
@@ -446,6 +470,7 @@ void TCP_input_validation(int fd) {
 			            aux += qsize + 1; 
 			        
 			        if (validate_extra_QUS(aux)) {
+			        	printf("after extra validation\n");
 			        	int all_clear = 1;
 				        token = strtok(aux, " ");
 				        qIMG = atoi(token);
@@ -734,19 +759,21 @@ int main(int argc, char *argv[])
         if (FD_ISSET(fd_udp, &set)) {
             printf("Receiving from UDP client.\n");
             user_addrlen = sizeof(user_addr);
+
+            bzero(buffer, 1024);
             int n = recvfrom(fd_udp, buffer, 1024, 0, (struct sockaddr *) &user_addr, &user_addrlen);
             if (n == -1)
                 exit(ERROR);
 
-            char * token;
             printf("Message received: %s\n", buffer);
             char *to_validate = strdup(buffer); // preciso para validar protocolo
             char *to_token = strdup(buffer);    // os strtok do PTP so funcionam co esta linha
-            token = strtok(buffer, " \n");
-
+            char * token = strtok(buffer, " \n");
             if (strcmp(token, "REG") == 0) {
                 if (validate_REG(to_validate)) {
                     n = sendto(fd_udp, "RGR OK\n", 7, 0, (struct sockaddr *) &user_addr, user_addrlen);
+                	if (n == -1)
+                        exit(ERROR);
                 }
                 else {
                     send_ERR_MSG_UDP(fd_udp, &res_udp);
@@ -774,11 +801,15 @@ int main(int argc, char *argv[])
             } else if (strcmp(token, "PTP") == 0) {
                 if (validate_PTP(to_validate)) {
                     token = strtok(to_token, " ");
+
+                    // userID
                     token = strtok(NULL, " ");
                     char *stringID = strdup(token);
+
+                    // topic
                     token = strtok(NULL, " \n");
                     char *topic_title = strdup(token);
-                    token = strtok(NULL, " \n");
+
 
                     if (n_topics == MAX_TOPICS) {
                         n = sendto(fd_udp, "PTR FUL\n", 8, 0, (struct sockaddr *) &user_addr, user_addrlen);
@@ -786,10 +817,11 @@ int main(int argc, char *argv[])
                             exit(ERROR);
                     }
 
-                    else if (token != NULL || !registered_user(users, atoi(stringID)) || strlen(topic_title) > 10) {
+                    else if (!registered_user(users, atoi(stringID)) || strlen(topic_title) > 10) {
                         n = sendto(fd_udp, "PTR NOK\n", 8, 0, (struct sockaddr *) &user_addr, user_addrlen);
                         if (n == -1)
                             exit(ERROR);
+                        printf("Returned wrong request information.\n");
                     }
 
                     else if (topic_exists(topics, topic_title)) {
@@ -803,12 +835,13 @@ int main(int argc, char *argv[])
                         Topic* new = createTopic(topic_title, atoi(stringID));
                         addEl(topics, new);
                         insertInTable(topics_hash, new, hash(topic_title));
+                        createTopicDir(topic_title);
                         n_topics++;
 
                         n = sendto(fd_udp, "PTR OK\n", 7, 0, (struct sockaddr *) &user_addr, user_addrlen);
-                        printf("Returned OK information\n");
                         if (n == -1)
                             exit(ERROR);
+                        printf("Returned OK information\n");
                     }
 
                     free(stringID);
@@ -816,6 +849,7 @@ int main(int argc, char *argv[])
                 }
                 else {
                     send_ERR_MSG_UDP(fd_udp, &res_udp);
+                    printf("Returned wrong protocol information.\n");
                 }
 
 
@@ -833,14 +867,14 @@ int main(int argc, char *argv[])
                     int n_questions = (questions_list == NULL ? 0 : listSize(questions_list));
 
                     //Create message data
-                    char * message = calloc(7 + ndigits(j) + j * (10 + 1 + 5 + 1 + 2), sizeof(char));
+                    char * message = calloc(7 + ndigits(n_questions) + n_questions * (10 + 1 + 5 + 1 + 2), sizeof(char));
                     char * msg_help = message;
 
                     //LQR N
-                    memcpy(msg_help, "LQR ", 4);
+                /*    memcpy(msg_help, "LQR ", 4);
                     msg_help += 4;
-                    sprintf(msg_help, "%d", n_questions);
-                    msg_help += ndigits(n_questions);
+                 */   sprintf(msg_help, "LQR %d", n_questions);
+                    msg_help += 5 + ndigits(n_questions);
 
                     //populate with the amount of questions
                     if (questions_list != NULL) {
@@ -884,7 +918,6 @@ int main(int argc, char *argv[])
             if (n == -1)
                 exit(ERROR);
 
-            bzero(buffer, 1024);
             free(to_validate);
             free(to_token);
 
