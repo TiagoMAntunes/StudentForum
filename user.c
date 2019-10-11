@@ -549,7 +549,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 }
 
                 n = recvfrom(fd_udp, answer, 1024, 0, res_udp->ai_addr, &res_udp->ai_addrlen);
-                if (errno == EAGAIN) {
+                if (n < 0 &&errno == EAGAIN) {
                     printf("Server didn't respond. Try again.\n");
                 }
                 else if (n == -1 && errno != EAGAIN) {
@@ -576,7 +576,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             }
 
             n = recvfrom(fd_udp, answer, 1024, 0, res_udp->ai_addr, &res_udp->ai_addrlen);
-            if (errno == EAGAIN) {
+            if (n < 0 && errno == EAGAIN) {
                 printf("Server didn't respond. Try again.\n");
             }
             else if (n == -1 && errno != EAGAIN) {
@@ -625,7 +625,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 }
 
                 n = recvfrom(fd_udp, answer, 1024, 0, res_udp->ai_addr, &res_udp->ai_addrlen);
-                if (errno == EAGAIN) {
+                if (n < 0 && errno == EAGAIN) {
                     printf("Server didn't respond. Try again.\n");
                 }
                 else if (n == -1 && errno != EAGAIN) {
@@ -656,7 +656,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 }
 
                 n = recvfrom(fd_udp, answer, 1024, 0, res_udp->ai_addr, &res_udp->ai_addrlen);
-                if (errno == EAGAIN) {
+                if (n < 0 && errno == EAGAIN) {
                     printf("Server didn't respond. Try again.\n");
                 }
                 else if (n == -1 && errno != EAGAIN) {

@@ -343,8 +343,38 @@ int ndigits(int i){
 
 	// validate qIMG [iext isize]
 	int validate_extra_QUS(char *msg) {
-		// TODO finish this
-		return 1;
+		char *aux = strdup(msg);
+		char *token = strtok(aux, " ");
+
+		// qIMG
+		if (strcmp(token, "0\n") != 0 && strcmp(token, "1") != 0) {
+			free(aux);
+			return 0;
+		}
+
+		// there's an image
+		if (strcmp(token, "1") == 0) {
+			// 3 byte extension
+			token = strtok(NULL, " ");
+			if (strlen(token) != 3) {
+				free(aux);
+				return 0;
+			}
+
+			// isize
+			token = strtok(NULL, " ");
+			int flag = token != NULL && is_number(token) && msg[6 + ndigits(atoi(token))] == ' ';
+			free(aux);
+			return flag;
+		}
+
+		// no image
+		else if (strcmp(token, "0\n") == 0){
+			free(aux);
+			return 1;
+		}
+
+		return 0;
 	}
 
 
@@ -408,7 +438,7 @@ void TCP_input_validation(int fd) {
 
 			        int changed = 0;
 			        writeTextFile(question, topic, qdata, BUF_SIZE, qsize, fd, &changed);
-
+			        
 			        if (changed){
 			            read(fd, message, BUF_SIZE);
 			            aux = message + 1;
@@ -416,6 +446,7 @@ void TCP_input_validation(int fd) {
 			            aux += qsize + 1; 
 			        
 			        if (validate_extra_QUS(aux)) {
+			        	int all_clear = 1;
 				        token = strtok(aux, " ");
 				        qIMG = atoi(token);
 				        if (qIMG) {
@@ -437,9 +468,19 @@ void TCP_input_validation(int fd) {
 
 				            changed = 0;
 				            writeImageFile(question, topic, qdata, BUF_SIZE, isize, fd, &changed, ext);
+
+				            // validate final \n
+				            token = strtok(qdata, "\n");
+				            all_clear = (token == NULL ? 0 : 1);
 				        }
-				        writeAuthorInformation(topic, question, userID, ext);
-				        write(fd, "QUR OK\n", 7);
+				        printf("clear ? %d\n", all_clear);
+				        if (all_clear) {
+				        	writeAuthorInformation(topic, question, userID, ext);
+				        	write(fd, "QUR OK\n", 7);
+				        }
+				        else {
+				        	// TODO erase created directories
+				        }
 				        free(qdata);
 				    }
 				    else {
