@@ -473,7 +473,6 @@ void TCP_input_validation(int fd) {
 				            token = strtok(qdata, "\n");
 				            all_clear = (token == NULL ? 0 : 1);
 				        }
-				        printf("clear ? %d\n", all_clear);
 				        if (all_clear) {
 				        	writeAuthorInformation(topic, question, userID, ext);
 				        	write(fd, "QUR OK\n", 7);

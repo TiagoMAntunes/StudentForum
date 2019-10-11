@@ -30,6 +30,7 @@ char * getAnswerImagePath(char * answer_dir, char * ext);
 
 // General
 int validateDirectories(char * topic, char * question);
+int fileExists(char *filename, int text);
 void writeTextFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed);
 void writeImageFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed, char * ext);
 void writeAuthorInformation(char * topic, char * question, char * userID, char * ext);

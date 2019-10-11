@@ -640,7 +640,6 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 printf("Invalid command.\ntopic_propose topic / tp topic\n");
 
             free(propose_topic);
-
         }
 
         else if (user_exists && (strcmp(token, "question_list\n") == 0|| strcmp(token, "ql\n")) == 0) {
@@ -955,13 +954,18 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 int qIMG; //flag
                 char * aux = to_validate + strlen(token) + 1;
                 if (validate_qs_as_input(to_validate, 4)) {
+                    int exists;
+
+                    // question title
                     token = strtok(aux, " ");
                     submit_question = strdup(token);
+
+                    // text_file
                     token = strtok(NULL, " ");
                     text_file = malloc(sizeof(char) * strlen(token) + 5);
                     strcpy(text_file, token);
+    
                     token = strtok(NULL, " ");
-
                     if ((qIMG = token != NULL)){
                         image_file = strdup(token);
                         i = strlen(image_file) - 1;
@@ -975,57 +979,73 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                         text_file[i] = '\0';
                     }
 
-                    qsize = get_filesize(text_file);
-                    qdata = (char*) malloc (sizeof(char) * qsize + 1);
+                    char *text_noext = strtok(text_file, ".");
+                    if (fileExists((text_noext == NULL ? text_file : text_noext), 1)) {
+                        int image_exists = 1;
+                        qsize = get_filesize(text_file);
+                        qdata = (char*) malloc (sizeof(char) * qsize + 1);
 
-                    get_txtfile(text_file, qdata, qsize);
+                        get_txtfile(text_file, qdata, qsize);
 
-                    if(qIMG) {
-                        isize = get_filesize(image_file);
-                        idata = (char*) malloc (sizeof(char) * (isize));
-                        char ext[4];
+                        if(qIMG) {
+                            if (fileExists(image_file, 0)) {
+                                isize = get_filesize(image_file);
+                                idata = (char*) malloc (sizeof(char) * (isize));
+                                char ext[4];
 
-                        getExtension(image_file, ext);
-                        get_img(image_file, idata, isize);
+                                getExtension(image_file, ext);
+                                get_img(image_file, idata, isize);
 
-                        msg_size = 21 + strlen(topic) + strlen(submit_question) + ndigits(qsize) + qsize + ndigits(qIMG) + ndigits(isize) + isize;
+                                msg_size = 21 + strlen(topic) + strlen(submit_question) + ndigits(qsize) + qsize + ndigits(qIMG) + ndigits(isize) + isize;
 
-                        message = calloc(msg_size,sizeof(char));
-                        n = sprintf(message, "QUS %d %s %s %d %s %d %s %d ", userID, topic, submit_question, qsize, qdata, qIMG, ext,isize);
-                        memcpy(message + n, idata, isize); //copy image to message
-                        printf("Image size: %d\n", isize);
-                        message[n + isize + 1] = '\n';
+                                message = calloc(msg_size,sizeof(char));
+                                n = sprintf(message, "QUS %d %s %s %d %s %d %s %d ", userID, topic, submit_question, qsize, qdata, qIMG, ext,isize);
+                                memcpy(message + n, idata, isize); //copy image to message
+                                printf("Image size: %d\n", isize);
+                                message[n + isize + 1] = '\n';
 
-                        free(idata);
-                        free(image_file);
+                                free(idata);
+                                free(image_file);
+                            }
+                            else
+                                image_exists = 0;     
+                        }
+
+                        else {
+                            msg_size = 17 + strlen(topic) + strlen(submit_question) + ndigits(qsize) + qsize;
+
+                            message = malloc(sizeof(char) * (msg_size));
+                            int k = sprintf(message, "QUS %d %s %s %d %s 0", userID, topic, submit_question, qsize, qdata);
+                            message[k] = '\n';
+                        }
+
+                        if (image_exists) {
+                            fd_tcp = create_TCP(hostname,  &res_tcp);
+                            n = connect(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
+                            if (n == -1) exit(1);
+
+                            //send request
+                            write_TCP(fd_tcp, message, msg_size);
+
+                            //receive answer
+                            if (read(fd_tcp, answer, 1024) == -1) {
+                                exit(ERROR);
+                            }
+                            receive_QUR(answer);
+
+                            close(fd_tcp);
+                            free(text_file);
+                            free(submit_question);
+                            free(qdata);
+                            free(message);
+                        }
+                        else {
+                            printf("Image file doesn't exist.\n");
+                        }
                     }
-
                     else {
-                        msg_size = 17 + strlen(topic) + strlen(submit_question) + ndigits(qsize) + qsize;
-
-                        message = malloc(sizeof(char) * (msg_size));
-                        int k = sprintf(message, "QUS %d %s %s %d %s 0", userID, topic, submit_question, qsize, qdata);
-                        message[k] = '\n';
+                        printf("Text file doesn't exist.\n");
                     }
-
-                    fd_tcp = create_TCP(hostname,  &res_tcp);
-                    n = connect(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
-                    if (n == -1) exit(1);
-
-                    //send request
-                    write_TCP(fd_tcp, message, msg_size);
-
-                    //receive answer
-                    if (read(fd_tcp, answer, 1024) == -1) {
-                        exit(ERROR);
-                    }
-                    receive_QUR(answer);
-
-                    close(fd_tcp);
-                    free(text_file);
-                    free(submit_question);
-                    free(qdata);
-                    free(message);
                 }
                 else {
                     printf("Invalid command.\nsubmit_question_submit submit_question text_file [image_file.ext] /\nqs submit_question test_file [image_file.ext]\n");

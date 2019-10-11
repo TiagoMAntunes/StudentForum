@@ -24,6 +24,17 @@ FILE * getQuestionImage(Topic * topic, char * question) {
     return NULL;
 }
 
+int fileExists(char *filename, int text) {
+    struct stat sb;
+    if (text) {
+        char complete_name[strlen(filename) + 5];   // filename.txt\0
+        sprintf(complete_name, "%s.txt", filename);
+        filename = complete_name;
+    }
+
+    return (stat(filename, &sb) == 0);
+}
+
 int validateDirectories(char * topic, char * question) {
     char * dir = calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 3,sizeof(char));
     struct stat sb;
