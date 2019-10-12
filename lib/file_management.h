@@ -9,6 +9,7 @@
 List * getTopicQuestions(char * dir_name, int* list_size);
 int getNumberOfQuestions(char *topic);
 void createTopicDir(char *topic);
+int topicDirExists(char *topic);
 
 // Question
 void createQuestion(char * topic, char * question, char * text, int text_size, char * image, int image_size, char * ext);
@@ -30,7 +31,8 @@ char * getAnswerQuestionPath(char * answer_dir);
 char * getAnswerImagePath(char * answer_dir, char * ext);
 
 // General
-int validateDirectories(char * topic, char * question);
+int validateDirectorie(char * topic, char * question);
+void eraseDirectory(char *topic, char* question);
 int fileExists(char *filename);
 void writeTextFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed);
 void writeImageFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed, char * ext);

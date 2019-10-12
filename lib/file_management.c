@@ -35,6 +35,13 @@ void createTopicDir(char *topic) {
     mkdir(dir, 0700);
 }
 
+int topicDirExists(char *topic) {
+    char *dir = calloc(PREFIX_LEN + strlen(topic) + 1,sizeof(char));
+    sprintf(dir, "%s%s/", PREFIX, topic);
+    struct stat sb;
+    return (stat(dir, &sb) == 0);
+}
+
 int validateDirectories(char * topic, char * question) {
     char * dir = calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 3,sizeof(char));
     struct stat sb;
@@ -55,6 +62,13 @@ int validateDirectories(char * topic, char * question) {
         return 1;
     }
     return 0;
+}
+
+void eraseDirectory(char *topic, char* question) {
+    char *dir =  calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 3,sizeof(char));
+    sprintf(dir, "%s%s/%s/", PREFIX, topic, question);
+
+    if (remove(dir) < 0) exit(1);
 }
 
 void writeToFile(char * filename, char * buffer, int buffer_size, int total_size, int fd, int * changed) {

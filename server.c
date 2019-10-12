@@ -418,10 +418,8 @@ void TCP_input_validation(int fd) {
     printf("Prefix: %s\n", prefix);
     if (strcmp(prefix, "QUS") == 0) {
     	if (validate_QUS(message)) {
-    		printf("after validation\n");
 	        char topic[11], question[11], userID[6], * qdata, ext[4];
 	        int qsize, qIMG, isize;
-	        printf("QUS inside!\n");
 
 	        bzero(topic, 11);
 	        bzero(question, 11);
@@ -449,79 +447,94 @@ void TCP_input_validation(int fd) {
 
 		        aux = token + ndigits(qsize) + 1;
 
-		        if (validateDirectories(topic, question)) {	
+		        if (topicDirExists(topic)) {
 
-			        qdata = calloc(BUF_SIZE, sizeof(char));
-			        
-			        //sprintf(qdata, "%s", aux);
-			        memcpy(qdata, aux, MIN(qsize, BUF_SIZE - (aux - message)));
+			        if (validateDirectories(topic, question)) {	
 
-			        //in case there's some space available in the buffer, fill it in to avoid bad writes
-			        if (BUF_SIZE - (aux - message) < qsize)
-			            read(fd, qdata + MIN(qsize, BUF_SIZE - (aux - message)), BUF_SIZE - MIN(qsize, BUF_SIZE - (aux - message)));
+				        qdata = calloc(BUF_SIZE, sizeof(char));
+				        
+				        //sprintf(qdata, "%s", aux);
+				        memcpy(qdata, aux, MIN(qsize, BUF_SIZE - (aux - message)));
 
-			        int changed = 0;
-			        writeTextFile(question, topic, qdata, BUF_SIZE, qsize, fd, &changed);
-			        
-			        if (changed){
-			            read(fd, message, BUF_SIZE);
-			            aux = message + 1;
-			        } else
-			            aux += qsize + 1; 
-			        
-			        if (validate_extra_QUS(aux)) {
-			        	printf("after extra validation\n");
-			        	int all_clear = 1;
-				        token = strtok(aux, " ");
-				        qIMG = atoi(token);
-				        if (qIMG) {
-				            token = strtok(NULL, " ");
-				            sprintf(ext, "%s", token);
+				        //in case there's some space available in the buffer, fill it in to avoid bad writes
+				        if (BUF_SIZE - (aux - message) < qsize)
+				            read(fd, qdata + MIN(qsize, BUF_SIZE - (aux - message)), BUF_SIZE - MIN(qsize, BUF_SIZE - (aux - message)));
 
-				            token = strtok(NULL, " ");
-				            isize = atoi(token);
-				            printf("Prepare to write: %d\n", isize);
-				            //reuse qdata for less memory
-				            aux = token + ndigits(isize) + 1;
-				            memcpy(qdata, aux, MIN(isize, BUF_SIZE - (aux - message)));
+				        int changed = 0;
+				        writeTextFile(question, topic, qdata, BUF_SIZE, qsize, fd, &changed);
+				        
+				        if (changed){
+				            read(fd, message, BUF_SIZE);
+				            aux = message + 1;
+				        } else
+				            aux += qsize + 1; 
+				        
+				        if (validate_extra_QUS(aux)) {
+				        	printf("after extra validation\n");
+				        	int all_clear = 1;
+					        token = strtok(aux, " ");
+					        qIMG = atoi(token);
+					        if (qIMG) {
+					            token = strtok(NULL, " ");
+					            sprintf(ext, "%s", token);
 
-				            //in case there's some space available in the buffer, fill it in to avoid bad writes
-				            if (BUF_SIZE - (aux - message) < isize) {
-				                printf("Sizes: %d %ld\n", isize, BUF_SIZE - (aux - message));
-				                read(fd, qdata + MIN(isize, BUF_SIZE - (aux - message)), BUF_SIZE - MIN(isize, BUF_SIZE - (aux - message)));
-				            }
+					            token = strtok(NULL, " ");
+					            isize = atoi(token);
+					            printf("Prepare to write: %d\n", isize);
+					            //reuse qdata for less memory
+					            aux = token + ndigits(isize) + 1;
+					            memcpy(qdata, aux, MIN(isize, BUF_SIZE - (aux - message)));
 
-				            changed = 0;
-				            writeImageFile(question, topic, qdata, BUF_SIZE, isize, fd, &changed, ext);
+					            //in case there's some space available in the buffer, fill it in to avoid bad writes
+					            if (BUF_SIZE - (aux - message) < isize) {
+					                printf("Sizes: %d %ld\n", isize, BUF_SIZE - (aux - message));
+					                if (read(fd, qdata + MIN(isize, BUF_SIZE - (aux - message)), BUF_SIZE - MIN(isize, BUF_SIZE - (aux - message))) < 0)
+					                	exit(ERROR);
+					            }
 
-				            // validate final \n
-				            token = strtok(qdata, "\n");
-				            all_clear = (token == NULL ? 0 : 1);
-				        }
-				        if (all_clear) {
-				        	writeAuthorInformation(topic, question, userID, ext);
-				        	write(fd, "QUR OK\n", 7);
-				        }
-				        else {
-				        	// TODO erase created directories
-				        }
-				        free(qdata);
+					            changed = 0;
+					            writeImageFile(question, topic, qdata, BUF_SIZE, isize, fd, &changed, ext);
+
+					            // validate final \n
+					            token = strtok(qdata, "\n");
+					            all_clear = (token == NULL ? 0 : 1);
+					        }
+					        if (all_clear) {
+					        	writeAuthorInformation(topic, question, userID, ext);
+					        	if (write(fd, "QUR OK\n", 7) < 0) exit(ERROR);
+					        	printf("Returned OK information.\n");
+					        }
+					        else {
+					        	eraseDirectory(topic, question);
+					        	if (write(fd, "ERR\n", 4) < 0) exit(ERROR);
+					    		printf("Returned wrong protocol information.\n");
+					        }
+					        free(qdata);
+					    }
+					    else {
+					    	eraseDirectory(topic, question);
+					    	if (write(fd, "ERR\n", 4) < 0) exit(ERROR);
+					    	printf("Returned wrong protocol information.\n");
+					    }
 				    }
 				    else {
-				    	// TODO apagar diretorias criadas
-				    	write(fd, "QUR NOK\n", 8);
+				    	if (write(fd, "QUR DUP\n", 8) < 0) exit(ERROR);
+				    	printf("Returned duplication information.\n");
 				    }
-			    }
-			    else {
-			    	write(fd, "QUR DUP\n", 8);
-			    }
+				}
+				else {
+					if (write(fd, "QUR NOK\n", 8) < 0) exit(ERROR);
+					printf("Returned invalid request information.\n");
+				}
 		    }
 			else {
-	    		write(fd, "QUR FUL\n", 8);
+	    		if (write(fd, "QUR FUL\n", 8) < 0) exit(ERROR);
+	    		printf("Returned full list information.\n");
 	    	}
 		}
 		else {
-			write(fd, "QUR NOK\n", 8);
+			if (write(fd, "ERR\n", 4) < 0) exit(ERROR);
+			printf("Returned wrong protocol information.\n");
 		}
 	    
     } else if(strcmp("GQU", prefix) == 0) {
@@ -821,7 +834,7 @@ int main(int argc, char *argv[])
                         n = sendto(fd_udp, "PTR NOK\n", 8, 0, (struct sockaddr *) &user_addr, user_addrlen);
                         if (n == -1)
                             exit(ERROR);
-                        printf("Returned wrong request information.\n");
+                        printf("Returned invalid request information.\n");
                     }
 
                     else if (topic_exists(topics, topic_title)) {
