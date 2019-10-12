@@ -704,14 +704,14 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
                     int msg_size = strlen(question_title) + strlen(topic) + 7;
                     char * message = malloc(sizeof(char) * (msg_size+1));
-                    int k = sprintf(message, "GQU %s %s", topic, question_title);
-                    message[k] = '\n';
+                    int k = sprintf(message, "GQU %s %s\n", topic, question_title);
+                    //message[k] = '\n';
 
                     fd_tcp = create_TCP(hostname,  &res_tcp);
                     n = connect(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
                     if (n == -1) exit(1);
 
-                    write_TCP(fd_tcp, message, msg_size);
+                    write_TCP(fd_tcp, message, msg_size - 1);
                     
                     //get answer
                     int n;
