@@ -1023,8 +1023,6 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
                             int k = sprintf(message, "QUS %d %s %s %d %s 0", userID, topic, submit_question, qsize, qdata);
                             message[k] = '\n';
-
-                            printf("sent = %s\n", message);
                         }
 
                         if ((qIMG && image_exists) || !qIMG) {

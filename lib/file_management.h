@@ -12,6 +12,7 @@ void createTopicDir(char *topic);
 int topicDirExists(char *topic);
 
 // Question
+int questionDirExists(char *topic, char *question);
 void createQuestion(char * topic, char * question, char * text, int text_size, char * image, int image_size, char * ext);
 FILE * getQuestionText(Topic * topic, char * question);
 FILE * getQuestionImage(Topic * topic, char * question);

@@ -42,6 +42,14 @@ int topicDirExists(char *topic) {
     return (stat(dir, &sb) == 0);
 }
 
+int questionDirExists(char *topic, char *question) {
+    char *dir =  calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 3,sizeof(char));
+    sprintf(dir, "%s%s/%s/", PREFIX, topic, question);
+    struct stat sb;
+
+    return (stat(dir, &sb) == 0);
+}
+
 int validateDirectories(char * topic, char * question) {
     char * dir = calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 3,sizeof(char));
     struct stat sb;
