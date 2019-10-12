@@ -320,7 +320,7 @@ void get_txtfile(char* filename, char* txt, int length){
 
 int get_filesize(char* filename){
     FILE* f;
-    int length;
+    int length = 0;
 
     f = fopen(filename, "r");
 
@@ -890,6 +890,9 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                                     printf("Extension is now: %s\n", ext);
                                     aux = token + strlen(token) + 1;
                                     if (aux - answer >= n) {
+                                        printf("Gonna read from answer: \n");
+                                        write(1, answer, 1024);
+                                        printf("\n----------------END\n\n\n");
                                         bzero(answer, 1024);
                                         while ((n = read(fd_tcp, answer, 1024)) == 0) ;
                                         aux = answer;
@@ -1067,7 +1070,8 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             char * aux = to_validate + strlen(token) + 1;
             if (validate_qs_as_input(to_validate, 3)) {
                 token = strtok(aux, " ");
-                text_file = strdup(token);
+                text_file = calloc(strlen(token) + 5, sizeof(char));
+                sprintf(text_file, "%s.txt", token);
                 token = strtok(NULL, " ");
 
                 printf("curr topic: %s curr question: %s\n", topic, question);
@@ -1085,8 +1089,9 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     text_file[i] = '\0';
                 }
 
+                printf("Text file is: %s\n", text_file);
                 asize = get_filesize(text_file);
-                adata = (char*) malloc (sizeof(char) * asize + 1);
+                adata = calloc(asize + 1, sizeof(char));
 
                 get_txtfile(text_file, adata, asize);
 
