@@ -30,13 +30,14 @@ int fileExists(char *filename) {
 }
 
 void createTopicDir(char *topic) {
-    char *dir = calloc(PREFIX_LEN + strlen(topic) + 1,sizeof(char));
+    char *dir = calloc(PREFIX_LEN + strlen(topic) + 2,sizeof(char));
     sprintf(dir, "%s%s/", PREFIX, topic);
+    mkdir(PREFIX, 0700); //requires ./topic dir to be created first
     mkdir(dir, 0700);
 }
 
 int topicDirExists(char *topic) {
-    char *dir = calloc(PREFIX_LEN + strlen(topic) + 1,sizeof(char));
+    char *dir = calloc(PREFIX_LEN + strlen(topic) + 2,sizeof(char));
     sprintf(dir, "%s%s/", PREFIX, topic);
     struct stat sb;
     return (stat(dir, &sb) == 0);
