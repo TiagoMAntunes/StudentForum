@@ -462,7 +462,6 @@ void update_question_list(Hash * topics_hash, char *answer) {
         userID[i] = 0;
         i = 0;
 
-        printf("token = %s\n", token);
         while (i < 2) {
             n_answers[i] = token[i];
             i++;

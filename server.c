@@ -871,13 +871,11 @@ int main(int argc, char *argv[])
                     char * msg_help = message;
 
                     //LQR N
-                /*    memcpy(msg_help, "LQR ", 4);
-                    msg_help += 4;
-                 */   sprintf(msg_help, "LQR %d", n_questions);
-                    msg_help += 5 + ndigits(n_questions);
-
+                    sprintf(msg_help, "LQR %d", (n_questions == 0 ? 0 : 4 + ndigits(n_questions)));
+                    msg_help += (n_questions == 0 ? 5 : 4 + ndigits(n_questions));
+                    
                     //populate with the amount of questions
-                    if (questions_list != NULL) {
+                    if (n_questions > 0) {
                         Iterator * it = createIterator(questions_list);
                         char userID[6], ext[4];
                         bzero(userID, 6);
@@ -901,7 +899,11 @@ int main(int argc, char *argv[])
                         }
                         killIterator(it);
                         listFree(questions_list);
-                    } else msg_help++;
+                    } 
+                    else {
+                    	msg_help++;
+                    }
+
                     *(msg_help) = '\n';
                     printf("Char: %c with value %d\n", *msg_help, *msg_help);
                     printf("String: \"%s\" with size: %ld\n", message, strlen(message));
