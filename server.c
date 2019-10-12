@@ -400,6 +400,31 @@ int ndigits(int i){
 		return 0;
 	}
 
+	int validate_GQU(char *msg) {
+		char *aux = strdup(msg);
+
+		char *token = strtok(aux, " ");	// GQU
+		if (token == NULL || strcmp(token, "GQU") != 0) {
+			free(aux);
+			return 0;
+		}
+
+		token = strtok(NULL, " ");
+		if (token == NULL || strlen(token) > 10) {
+			free(aux);
+			return 0;
+		}
+		int len_topic = strlen(token);
+
+		token = strtok(NULL, " ");
+		if (token == NULL || strlen(token) > 10) {
+			free(aux);
+			return 0;
+		}
+		int len_question = strlen(token);
+		free(aux);
+		return msg[4 + len_topic + len_question] == '\n';
+	}
 
 
 
@@ -538,92 +563,97 @@ void TCP_input_validation(int fd) {
 		}
 	    
     } else if(strcmp("GQU", prefix) == 0) {
-        char topic[11], question[11], userID[6], ext[4];
-        bzero(topic, 11);
-        bzero(question, 11);
-        bzero(userID, 6);
-        bzero(ext, 4);
+    	if (validate_GQU(message)) {
+	        char topic[11], question[11], userID[6], ext[4];
+	        bzero(topic, 11);
+	        bzero(question, 11);
+	        bzero(userID, 6);
+	        bzero(ext, 4);
 
-        token = strtok(aux, " ");
-        sprintf(topic, "%s", token);
+	        token = strtok(aux, " ");
+	        sprintf(topic, "%s", token);
 
-        token = strtok(NULL, " \n");
-        sprintf(question, "%s", token);
-        int answers_number;
-        List * answers = getAnswers(topic, question, &answers_number);
+	        token = strtok(NULL, " \n");
+	        sprintf(question, "%s", token);
+	        int answers_number;
+	        List * answers = getAnswers(topic, question, &answers_number);
 
-        Iterator * it = createIterator(answers);
-        printf("Available answers:\n");
-        while (hasNext(it))
-            printf("%s\n", current(next(it)));
-        killIterator(it);
+	        Iterator * it = createIterator(answers);
+	        printf("Available answers:\n");
+	        while (hasNext(it))
+	            printf("%s\n", current(next(it)));
+	        killIterator(it);
 
-        bzero(message, BUF_SIZE);
-        getAuthorInformation(topic, question, userID, ext);
-        char * txtfile = getQuestionPath(topic, question);
-        char * imgfile = getImagePath(topic, question, ext);
+	        bzero(message, BUF_SIZE);
+	        getAuthorInformation(topic, question, userID, ext);
+	        char * txtfile = getQuestionPath(topic, question);
+	        char * imgfile = getImagePath(topic, question, ext);
 
-        int txt_size = get_filesize(txtfile);
-        sprintf(message, "QGR %s %d ", userID, get_filesize(txtfile));
-        write(fd, message, strlen(message));
-        
-        readFromFile(txtfile, message, BUF_SIZE, txt_size, fd);
+	        int txt_size = get_filesize(txtfile);
+	        sprintf(message, "QGR %s %d ", userID, get_filesize(txtfile));
+	        if (write(fd, message, strlen(message)) < 0) exit(ERROR);
+	        
+	        readFromFile(txtfile, message, BUF_SIZE, txt_size, fd);
 
-        int qIMG = imgfile != NULL ? 1 : 0;
-        sprintf(message, " %d ", qIMG);
-        if (qIMG) {
-            int image_size = get_filesize(imgfile);
-            sprintf(message + 3, "%s %d ", ext, image_size);
-            write(fd, message, 3 + strlen(ext) + ndigits(image_size) + 2);
-            write(1, message, 3 + strlen(ext) + ndigits(image_size) + 2);
-            readFromFile(imgfile, message, BUF_SIZE, image_size, fd);
-        }
-        char * aux = message;
-        if (answers_number > 0){
-            sprintf(message, " %d", answers_number);
-            aux += 2;
-        }
-        else {
-            sprintf(message, " 0\n");
-            aux += 3;
-        }
-        
-        write (fd, message, aux - message);
-        
-        it = createIterator(answers);
-        int question_count = 1;
-        while (hasNext(it)) {
-            char * answer_name = current(next(it));
-            bzero(userID, 6); bzero(ext, 4);
-            getAnswerInformation(answer_name, userID, ext);
-            if (txtfile != NULL) free(txtfile);
-            if (imgfile != NULL) free(imgfile);
+	        int qIMG = imgfile != NULL ? 1 : 0;
+	        sprintf(message, " %d ", qIMG);
+	        if (qIMG) {
+	            int image_size = get_filesize(imgfile);
+	            sprintf(message + 3, "%s %d ", ext, image_size);
+	            if (write(fd, message, 3 + strlen(ext) + ndigits(image_size) + 2) < 0) exit(ERROR);
+	            if (write(1, message, 3 + strlen(ext) + ndigits(image_size) + 2) < 0) exit(ERROR);
+	            readFromFile(imgfile, message, BUF_SIZE, image_size, fd);
+	        }
+	        char * aux = message;
+	        if (answers_number > 0){
+	            sprintf(message, " %d", answers_number);
+	            aux += 2;
+	        }
+	        else {
+	            sprintf(message, " 0\n");
+	            aux += 3;
+	        }
+	        
+	        if (write(fd, message, aux - message) < 0) exit(ERROR);
+	        
+	        it = createIterator(answers);
+	        int question_count = 1;
+	        while (hasNext(it)) {
+	            char * answer_name = current(next(it));
+	            bzero(userID, 6); bzero(ext, 4);
+	            getAnswerInformation(answer_name, userID, ext);
+	            if (txtfile != NULL) free(txtfile);
+	            if (imgfile != NULL) free(imgfile);
 
-            txtfile = getAnswerQuestionPath(answer_name);
-            imgfile = getAnswerImagePath(answer_name, ext);
-            txt_size = get_filesize(txtfile);
-            sprintf(message, " %02d %s %d ", question_count++, userID, txt_size);
+	            txtfile = getAnswerQuestionPath(answer_name);
+	            imgfile = getAnswerImagePath(answer_name, ext);
+	            txt_size = get_filesize(txtfile);
+	            sprintf(message, " %02d %s %d ", question_count++, userID, txt_size);
 
-            write(fd, message, strlen(message));
-            printf("I'm gonna read from %s\n", txtfile);
-            readFromFile(txtfile, message, BUF_SIZE, txt_size, fd);
+	            if (write(fd, message, strlen(message)) < 0) exit(ERROR);
+	            printf("I'm gonna read from %s\n", txtfile);
+	            readFromFile(txtfile, message, BUF_SIZE, txt_size, fd);
 
-            qIMG = imgfile != NULL ? 1 : 0;
-            sprintf(message, " %d", qIMG);
-            write(fd, message, strlen(message));
+	            qIMG = imgfile != NULL ? 1 : 0;
+	            sprintf(message, " %d", qIMG);
+	            if (write(fd, message, strlen(message)) < 0) exit(ERROR);
 
-            if (qIMG) {
-                int image_size = get_filesize(imgfile);
-                sprintf(message, " %s %d ", ext, image_size);
-                write(fd, message, strlen(message));
-                
-                readFromFile(imgfile, message, BUF_SIZE, image_size, fd);
-                
-            }
-        }
-        write(fd, "\n", 1);
-        
-        free(txtfile);
+	            if (qIMG) {
+	                int image_size = get_filesize(imgfile);
+	                sprintf(message, " %s %d ", ext, image_size);
+	                if (write(fd, message, strlen(message)) < 0) exit(ERROR);
+	                
+	                readFromFile(imgfile, message, BUF_SIZE, image_size, fd);
+	                
+	            }
+	        }
+	        if (write(fd, "\n", 1) < 0) exit(ERROR);
+	        free(txtfile);
+	    }
+	    else {
+	    	if (write(fd, "ERR\n", 4) < 0) exit(ERROR);
+	    	printf("Returned wrong protocol information.\n");
+	    }
 
     } else if (strcmp("ANS", prefix) == 0) {
         char topic[11], question[11], userID[6], * qdata, ext[4];
@@ -884,7 +914,7 @@ int main(int argc, char *argv[])
                     char * msg_help = message;
 
                     //LQR N
-                    sprintf(msg_help, "LQR %d", (n_questions == 0 ? 0 : 4 + ndigits(n_questions)));
+                    sprintf(msg_help, "LQR %d", (n_questions == 0 ? 0 : n_questions));
                     msg_help += (n_questions == 0 ? 5 : 4 + ndigits(n_questions));
                     
                     //populate with the amount of questions

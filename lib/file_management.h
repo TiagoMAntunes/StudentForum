@@ -31,7 +31,7 @@ char * getAnswerQuestionPath(char * answer_dir);
 char * getAnswerImagePath(char * answer_dir, char * ext);
 
 // General
-int validateDirectorie(char * topic, char * question);
+int validateDirectories(char * topic, char * question);
 void eraseDirectory(char *topic, char* question);
 int fileExists(char *filename);
 void writeTextFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed);
