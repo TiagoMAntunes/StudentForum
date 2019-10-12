@@ -990,12 +990,12 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
                     // proceed only if file.txt exists
                     if (fileExists(text_file)) {
-                        int image_exists = 0;
                         qsize = get_filesize(text_file);
                         qdata = (char*) malloc (sizeof(char) * qsize + 1);
 
                         get_txtfile(text_file, qdata, qsize);
-                        if(qIMG && fileExists(image_file)) {
+                        int image_exists = fileExists(image_file);
+                        if (qIMG && image_exists) {
                             image_exists = 1;
                             isize = get_filesize(image_file);
                             idata = (char*) malloc (sizeof(char) * (isize));
@@ -1012,11 +1012,11 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                             printf("Image size: %d\n", isize);
                             message[n + isize + 1] = '\n';
 
-                            free(idata);
                             free(image_file);
                                  
                         }
-                        else if (qIMG) {
+                        else if (qIMG && !image_exists) {
+                            free(idata);
                             printf("Image file doesn't exist.\n");         
                         }
                         else {
