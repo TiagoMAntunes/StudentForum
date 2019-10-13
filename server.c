@@ -484,15 +484,16 @@ void TCP_input_validation(int fd) {
 
 				        qdata = calloc(BUF_SIZE, sizeof(char));
 				        
+						int initial_size = MIN(qsize, BUF_SIZE - (aux - message));
 				        //sprintf(qdata, "%s", aux);
-				        memcpy(qdata, aux, MIN(qsize, BUF_SIZE - (aux - message)));
+				        memcpy(qdata, aux, initial_size);
 
 				        //in case there's some space available in the buffer, fill it in to avoid bad writes
 				        if (BUF_SIZE - (aux - message) < qsize)
-				            read(fd, qdata + MIN(qsize, BUF_SIZE - (aux - message)), BUF_SIZE - MIN(qsize, BUF_SIZE - (aux - message)));
+				            initial_size += read(fd, qdata + initial_size, BUF_SIZE - initial_size);
 
 				        int changed = 0;
-				        writeTextFile(question, topic, qdata, BUF_SIZE, qsize, fd, &changed);
+				        writeTextFile(question, topic, qdata, BUF_SIZE, qsize, fd, &changed, initial_size);
 				        
 				        if (changed){
 				            read(fd, message, BUF_SIZE);
@@ -514,17 +515,18 @@ void TCP_input_validation(int fd) {
 					            printf("Prepare to write: %d\n", isize);
 					            //reuse qdata for less memory
 					            aux = token + ndigits(isize) + 1;
-					            memcpy(qdata, aux, MIN(isize, BUF_SIZE - (aux - message)));
+								initial_size = MIN(isize, BUF_SIZE - (aux - message));
+					            memcpy(qdata, aux, initial_size);
 
 					            //in case there's some space available in the buffer, fill it in to avoid bad writes
 					            if (BUF_SIZE - (aux - message) < isize) {
-					                printf("Sizes: %d %ld\n", isize, BUF_SIZE - (aux - message));
-					                if (read(fd, qdata + MIN(isize, BUF_SIZE - (aux - message)), BUF_SIZE - MIN(isize, BUF_SIZE - (aux - message))) < 0)
+					                printf("Sizes: %d %ld\n", isize, initial_size);
+					                if ((initial_size += read(fd, qdata + initial_size, BUF_SIZE - initial_size)) < 0)
 					                	exit(ERROR);
 					            }
 
 					            changed = 0;
-					            writeImageFile(question, topic, qdata, BUF_SIZE, isize, fd, &changed, ext);
+					            writeImageFile(question, topic, qdata, BUF_SIZE, isize, fd, &changed, ext, initial_size);
 
 					            // validate final \n
 					            token = strtok(qdata, "\n");
@@ -700,15 +702,16 @@ void TCP_input_validation(int fd) {
 		        qdata = calloc(BUF_SIZE, sizeof(char));
 		        
 		        //sprintf(qdata, "%s", aux);
-		        memcpy(qdata, aux, MIN(qsize, BUF_SIZE - (aux - message)));
+				int initial_size = MIN(qsize, BUF_SIZE - (aux - message));
+		        memcpy(qdata, aux, initial_size);
 
 		        //in case there's some space available in the buffer, fill it in to avoid bad writes
 		        if (BUF_SIZE - (aux - message) < qsize)
-		            if (read(fd, qdata + MIN(qsize, BUF_SIZE - (aux - message)), BUF_SIZE - MIN(qsize, BUF_SIZE - (aux - message))) < 0) 
+		            if ((initial_size += read(fd, qdata + initial_size, BUF_SIZE - initial_size)) < 0) 
 		            	exit(ERROR);
 
 		        int changed = 0;
-		        answerWriteTextFile(question, topic, qdata, BUF_SIZE, qsize, fd, &changed, answer_number);
+		        answerWriteTextFile(question, topic, qdata, BUF_SIZE, qsize, fd, &changed, answer_number, initial_size);
 
 
 		        if (changed){
@@ -731,17 +734,19 @@ void TCP_input_validation(int fd) {
 			            printf("Prepare to write: %d\n", isize);
 			            //reuse qdata for less memory
 			            aux = token + ndigits(isize) + 1;
-			            memcpy(qdata, aux, MIN(isize, BUF_SIZE - (aux - message)));
+
+						int initial_size = MIN(isize, BUF_SIZE - (aux - message));
+			            memcpy(qdata, aux, initial_size);
 
 			            //in case there's some space available in the buffer, fill it in to avoid bad writes
 			            if (BUF_SIZE - (aux - message) < isize) {
 			                printf("Sizes: %d %ld\n", isize, BUF_SIZE - (aux - message));
-			                if (read(fd, qdata + MIN(isize, BUF_SIZE - (aux - message)), BUF_SIZE - MIN(isize, BUF_SIZE - (aux - message))) < 0)
+			                if ((initial_size += read(fd, qdata + initial_size, BUF_SIZE - initial_size)) < 0)
 			                	exit(ERROR);
 			            }
 
 			            changed = 0;
-			            answerWriteImageFile(question, topic, qdata, BUF_SIZE, isize, fd, &changed, ext, answer_number);
+			            answerWriteImageFile(question, topic, qdata, BUF_SIZE, isize, fd, &changed, ext, answer_number, initial_size);
 			        }
 			        // validate final \n
 		            token = strtok(qdata, "\n");

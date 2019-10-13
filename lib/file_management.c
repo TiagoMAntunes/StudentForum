@@ -97,15 +97,17 @@ void eraseDirectory(char *topic, char* question) {
     free(dir);
 }
 
-void writeToFile(char * filename, char * buffer, int buffer_size, int total_size, int fd, int * changed) {
+void writeToFile(char * filename, char * buffer, int buffer_size, int total_size, int fd, int * changed, int initial_size) {
     FILE * f = fopen(filename, "w+");
     printf("Opened: %s\n", filename);
+    int available_size = initial_size;
     while (total_size > 0) {
         clearerr(f);
-        total_size -= fwrite(buffer, sizeof(char), MIN(total_size, buffer_size), f);
+        total_size -= fwrite(buffer, sizeof(char), MIN(total_size, available_size), f);
         validateReadWrite(f, NULL);
         if (total_size > 0) { 
-            if (read(fd, buffer, MIN(buffer_size, total_size)) < 0) {
+            bzero(buffer, buffer_size);
+            if ((available_size = read(fd, buffer, MIN(buffer_size, total_size))) < 0) {
                 fclose(f);
                 exit(1);
             }
@@ -222,19 +224,19 @@ void getAnswerInformation(char * answer_dir, char * userID, char * ext) {
     free(filename);
 }
 
-void writeTextFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed) {
+void writeTextFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed, int start_size) {
     char * filename = calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 3 + QUESTION_LEN , sizeof(char)); //textfilename
     sprintf(filename, "%s%s/%s/question.txt", PREFIX, topic, question);
     
-    writeToFile(filename, buffer, buffer_size, qsize, fd, changed);
+    writeToFile(filename, buffer, buffer_size, qsize, fd, changed, start_size);
     free(filename);
 }
 
-void writeImageFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed, char * ext) {
+void writeImageFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed, char * ext, int start_size) {
     char * filename = calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 3 + IMAGE_LEN + EXT_LEN, sizeof(char));
     sprintf(filename, "%s%s/%s/image.%s", PREFIX, topic, question, ext);
     
-    writeToFile(filename, buffer, buffer_size, qsize, fd, changed);
+    writeToFile(filename, buffer, buffer_size, qsize, fd, changed, start_size);
     free(filename);
 }
 
@@ -338,18 +340,18 @@ void answerEraseDirectory(char *topic, char *question, int answer_number) {
     free(dir);
 }
 
-void answerWriteTextFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed, int answer_number) {
+void answerWriteTextFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed, int answer_number, int start_size) {
     char * file_text = calloc(PREFIX_LEN + strlen(topic) + 1 + strlen(question) * 2 + 5+ strlen("answer.") + EXT_LEN + 1, sizeof(char));
     sprintf(file_text, "%s%s/%s/%s_%02d/answer.txt", PREFIX, topic, question, question, answer_number);
-    writeToFile(file_text, buffer, buffer_size, qsize, fd, changed);
+    writeToFile(file_text, buffer, buffer_size, qsize, fd, changed, start_size);
 
     free(file_text);
 }
 
-void answerWriteImageFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed, char * ext, int answer_number) {
+void answerWriteImageFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed, char * ext, int answer_number, int start_size) {
     char * file_img = calloc(PREFIX_LEN + strlen(topic) + 1 + strlen(question) * 2 + 5 + strlen("image.") + EXT_LEN + 1, sizeof(char));
     sprintf(file_img, "%s%s/%s/%s_%02d/image.%s", PREFIX, topic, question, question, answer_number, ext);
-    writeToFile(file_img, buffer, buffer_size, qsize, fd, changed);
+    writeToFile(file_img, buffer, buffer_size, qsize, fd, changed, start_size);
 
     free(file_img);
 }

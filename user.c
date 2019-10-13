@@ -808,18 +808,23 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                             if (aux - answer >= n) {
                                 bzero(answer, 1024);
                                 while ((n = read(fd_tcp, answer, 1024)) == 0) ;
+                                printf("Read in line 811\n");
                                 aux = answer;
                             }
                             char qdata[1024];
                             bzero(qdata, 1024);
-                            memcpy(qdata, aux, MIN(qsize, 1024 - (aux - answer)));
+                            int initial_size = MIN(qsize, 1024 - (aux - answer));
+                            memcpy(qdata, aux, initial_size);
                             
+                            printf("userID: %s, qsise: %d\n", qUserID, qsize);
+
                             int changed = 0;
-                            writeTextFile(question, topic, qdata, 1024, qsize, fd_tcp, &changed);
+                            writeTextFile(question, topic, qdata, 1024, qsize, fd_tcp, &changed, initial_size);
 
                             if (changed) {
                                 bzero(answer, 1024);
                                 while ((n = read(fd_tcp, answer, 1024)) == 0) ;
+                                printf("Read in line 825\n");
                                 aux = answer + 1;
                             } else {
                                 aux += qsize + 1;
@@ -828,11 +833,12 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                             if (token == NULL) {
                                 bzero(answer, 1024);
                                 while ((n = read(fd_tcp, answer, 1024)) == 0) ;
+                                printf("Read in line 833\n");
                                 aux = answer;
                                 token = strtok(aux, " ");
                             }
                             int qIMG = atoi(token);
-                            
+                            printf("qIMG: %d\n", qIMG);
                             char ext[4] = {0};
                             if (qIMG) {
                                 token = strtok(NULL, " ");
@@ -846,25 +852,39 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                                     //re-read
                                     bzero(answer, 1024);
                                     while ((n = read(fd_tcp, answer, MIN(1024, isize))) == 0) ;
+                                    printf("Read in line 851\n");
                                     aux = answer;
                                     memcpy(qdata, answer, n);
+                                    initial_size = n;
                                 } else {
                                     int offset = n - (aux - answer);
                                     memcpy(qdata, aux, offset);
-                                    if ( offset < isize)
+                                    bzero(answer, 1024);
+                                    if ( offset < isize) {
+                                        printf("Read in line 859\n");
                                         //read what it can to the buffer
                                         while ( (n = read(fd_tcp, qdata + offset, MIN(1024 - offset, isize))) == 0 );
+                                    }
+                                    initial_size = offset + n;
                                 }
                                 changed = 0;
-                                writeImageFile(question, topic, qdata, 1024, isize, fd_tcp, &changed, ext);
+                                printf("ext: %s, isize: %d\n", ext, isize);
+                                writeImageFile(question, topic, qdata, 1024, isize, fd_tcp, &changed, ext, initial_size);
+                                printf("Changed: %d\n", changed);
                                 if(changed) {
                                     bzero(answer, 1024);
                                     while ((n = read(fd_tcp, answer, 1024)) == 0) ;
+                                    printf("Read in line 874\n");
                                     aux = answer + 1;
                                 } else 
                                     aux += isize + 1;
                             }
+                            printf("offset is: %d\n", aux - answer);
+                            write(1, qdata, 1024);
+                            printf("--------------------\n");
+
                             token = strtok(aux, " ");
+                            printf("Token is: %s\n", token);
                             int N = atoi(token);
                             aux = token + strlen(token) + 1;
                             printf("I've found: %d answers!\n", N);
@@ -917,15 +937,16 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
                                 answerDirectoriesValidationWithNumber(topic, question, answer_number);
                                 bzero(qdata, 1024);
-                                memcpy(qdata, aux, MIN(qsize, 1024 - (aux - answer)));
+                                int initial_size = MIN(qsize, 1024 - (aux - answer));
+                                memcpy(qdata, aux, initial_size);
                                 
 
                                 if (1024 - (aux - answer) < qsize) {
-                                    read(fd_tcp, qdata + MIN(qsize, 1024 - (aux - answer)), 1024 - MIN(qsize, 1024 - (aux - answer)));
+                                    initial_size += read(fd_tcp, qdata + initial_size, 1024 - initial_size);
                                 }
 
                                 changed = 0;
-                                answerWriteTextFile(question, topic, qdata, 1024, qsize, fd_tcp, &changed, answer_number);
+                                answerWriteTextFile(question, topic, qdata, 1024, qsize, fd_tcp, &changed, answer_number, initial_size);
 
                                 if (changed){
                                     read(fd_tcp, answer, 1024);
@@ -977,18 +998,19 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                                     write(1, aux, 1024);
                                     printf("\n-----------------------------------------");
                                     bzero(qdata, 1024);
-                                    memcpy(qdata, aux, MIN(aisize, 1024 - (aux - answer)));
+                                    int initial_size = MIN(aisize, 1024 - (aux - answer));
+                                    memcpy(qdata, aux, initial_size);
                                     
 
                                     if (1024 - (aux - answer) < aisize) {
-                                        read(fd_tcp, qdata + MIN(aisize, 1024 - (aux - answer)), 1024 - MIN(aisize, 1024 - (aux - answer)));
+                                        initial_size += read(fd_tcp, qdata + initial_size, 1024 - initial_size);
                                     }
 
                                     printf("\n\n\n----------------QDATA CONTENT----------------\n");
                                     write(1, qdata, 1024);
                                     printf("--------------------------------------------");
                                     changed = 0;
-                                    answerWriteImageFile(question, topic, qdata, 1024, aisize, fd_tcp, &changed, ext, answer_number);
+                                    answerWriteImageFile(question, topic, qdata, 1024, aisize, fd_tcp, &changed, ext, answer_number, initial_size);
                                     n = 0;
                                 }
                                 answerWriteAuthorInformation(topic, question, qUserID, ext, answer_number);
