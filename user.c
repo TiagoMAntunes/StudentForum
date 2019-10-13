@@ -437,6 +437,17 @@ void update_topic_list(List* topics, Hash *topics_hash, char* answer) {
     }
 }
 
+void freeQuestions(List *questions) {
+    Iterator *it = createIterator(questions);
+
+    while(hasNext(it)) {
+        free(current(next(it)));
+    }
+
+    listFree(questions);
+    killIterator(it);
+}
+
 void update_question_list(Hash * topics_hash, char *answer) {
     char *token = strtok(answer, " ");    // LQU
     token = strtok(NULL, " ");  // N
@@ -459,12 +470,8 @@ void update_question_list(Hash * topics_hash, char *answer) {
     }
 
     // free outdated list of questions
-    if (questions_titles != NULL) {
-        Iterator * it = createIterator(questions_titles);
-        while (hasNext(it)) free(current(next(it)));
-        killIterator(it);
-        listFree(questions_titles);
-    }
+    if (questions_titles != NULL) 
+        freeQuestions(questions_titles);
 
     questions_titles = newList();
     //display the questions available for the topic and save them
@@ -512,7 +519,7 @@ void freeTopics(List *topics) {
         deleteTopic(current(next(it)));
     }
 
-    free(topics);
+    listFree(topics);
     killIterator(it);
 }
 
@@ -1039,13 +1046,14 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
                             msg_size = 21 + strlen(topic) + strlen(submit_question) + ndigits(qsize) + qsize + ndigits(qIMG) + ndigits(isize) + isize;
 
-                            message = calloc(msg_size,sizeof(char));
+                            message = calloc(msg_size + 1,sizeof(char));
                             n = sprintf(message, "QUS %d %s %s %d %s %d %s %d ", userID, topic, submit_question, qsize, qdata, qIMG, ext,isize);
                             memcpy(message + n, idata, isize); //copy image to message
                             printf("Image size: %d\n", isize);
                             message[n + isize + 1] = '\n';
 
                             free(image_file);
+                            free(idata);
                                  
                         }
                         else if (qIMG && !image_exists) {
@@ -1186,7 +1194,11 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
         else if (strcmp(token, "exit\n") == 0) {
             deleteTable(topics_hash);
             freeTopics(topics);
+            if (questions_titles != NULL) 
+                freeQuestions(questions_titles);
             free(to_validate);
+            if (topic != NULL) free(topic);
+            if (question != NULL) free(question);
             if (used_tcp) freeaddrinfo(res_tcp);
             printf("Goodbye!\n");
             break;
