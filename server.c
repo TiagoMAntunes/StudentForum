@@ -749,7 +749,7 @@ void TCP_input_validation(int fd) {
 		        
 			        if (all_clear) {
 			        	answerWriteAuthorInformation(topic, question, userID, ext, answer_number);
-			        	if (write(fd, "QUR OK\n", 7) < 0) exit(ERROR);
+			        	if (write(fd, "ANR OK\n", 7) < 0) exit(ERROR);
 			        	printf("Returned OK information.\n");
 			        }
 			        else {
@@ -760,7 +760,6 @@ void TCP_input_validation(int fd) {
 			        free(qdata);
 			    }
 			    else {	// qIMG [iext isize] are wrong
-			    	printf("img\n");
 			    	if (write(fd, "ANR NOK\n", 8) < 0) exit(ERROR);
 		    		printf("Returned invalid request information.\n");
 			    }

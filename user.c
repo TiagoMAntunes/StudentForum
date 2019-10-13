@@ -238,27 +238,55 @@ void receive_QUR(char *answer, char* submit_question) {
     char *token;
 
     token = strtok(answer, " ");
-    if (strcmp(token, "QUR") != 0)
+    if (token != NULL && strcmp(token, "QUR") != 0)
         printf("Unexpected server response.\n");
 
-    else {
+    else if (token != NULL) {
         token = strtok(NULL, " \n");
-        if (strcmp(token, "OK") == 0) {
+        if (token != NULL && strcmp(token, "OK") == 0) {
             if (question != NULL) free(question);
             question = strdup(submit_question);
-            printf("Question sucessfully submitted.\nCurrent question: %s\n", question);       
+            printf("Question successfully submitted.\nCurrent question: %s\n", question);       
         }
-        else if (strcmp(token, "NOK") == 0) {
+        else if (token != NULL && strcmp(token, "NOK") == 0) {
             printf("Submission not successful\n");
         }
-        else if (strcmp(token, "FUL") == 0) {
+        else if (token != NULL && strcmp(token, "FUL") == 0) {
             printf("Question list is full. Question not submitted.\n");
         }
-        else if (strcmp(token, "DUP") == 0) {
+        else if (token != NULL && strcmp(token, "DUP") == 0) {
             printf("Question already exists. Question not submitted.\n");
         }
         else
             printf("Unexpected server response.\n");       
+    }
+    else {
+         printf("Unexpected server response.\n"); 
+    }
+}
+
+void receive_ANR(char *answer) {
+    char *token = strtok(answer, " ");
+
+    if (token != NULL && strcmp(token, "ANR") != 0)
+        printf("Unexpected server response.\n");
+
+    else if (token != NULL) {
+        token = strtok(NULL, " \n");
+        if (token != NULL && strcmp(token, "OK") == 0) {
+            printf("Answer successfully submitted.\n");       
+        }
+        else if (token != NULL && strcmp(token, "NOK") == 0) {
+            printf("Submission not successful\n");
+        }
+        else if (token != NULL && strcmp(token, "FUL") == 0) {
+            printf("Answer list is full. Answer not submitted.\n");
+        }
+        else
+            printf("Unexpected server response.\n");       
+    }
+    else {
+         printf("Unexpected server response.\n"); 
     }
 }
 
@@ -1109,6 +1137,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                         msg_size = 21 + ndigits(userID) + strlen(topic) + strlen(question) + ndigits(asize) + asize + ndigits(qIMG) + ndigits(isize) + isize;
 
                         message = calloc(msg_size,sizeof(char));
+                        bzero(message, 1024);
                         n = sprintf(message, "ANS %d %s %s %d %s %d %s %d ", userID, topic, question, asize, adata, qIMG, ext,isize);
                         memcpy(message + n, idata, isize); //copy image to message
                         printf("Image size: %d\n", isize);
@@ -1122,6 +1151,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                         msg_size = 17 + strlen(topic) + strlen(question) + ndigits(asize) + asize;
 
                         message = malloc(sizeof(char) * (msg_size));
+                        bzero(message, 1024);
                         int k = sprintf(message, "ANS %d %s %s %d %s 0", userID, topic, question, asize, adata);
                         message[k] = '\n';
                     }
@@ -1130,8 +1160,13 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     n = connect(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
                     if (n == -1) exit(1);
 
+                    // send request
                     write_TCP(fd_tcp, message, msg_size); //TODO receive server confirmation
-                    printf("Enviado!\n");
+                    
+                    // get answer
+                    if(read(fd_tcp, answer, 1024) < 0) exit(ERROR);
+                    receive_ANR(answer);
+
                     close(fd_tcp);
                     used_tcp = 1;
                     free(adata);

@@ -102,14 +102,14 @@ void readFromFile(char * filename, char * buffer, int buffer_size, int total_siz
     int n = fread(buffer, sizeof(char), buffer_size, f);
     while(total_size > 0) {
         total_size -= write(fd, buffer, MIN(buffer_size, n));
-        printf("wrote: %d\n", tmp - total_size);
-        printf("total size is now: %d\n", total_size);
+ //       printf("wrote: %d\n", tmp - total_size);
+ //       printf("total size is now: %d\n", total_size);
         if (total_size > 0) {
             n = fread(buffer, sizeof(char), buffer_size, f);
         }
     }
     printf("Finished writing!\n");
-    printf("Current total size: %d\n", total_size);
+//    printf("Current total size: %d\n", total_size);
     fclose(f);
 }
 
