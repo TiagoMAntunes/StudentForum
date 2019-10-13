@@ -217,7 +217,7 @@ void receive_PTR(char* answer, int *tl_available, char *propose_topic, int userI
             printf("Invalid request.\n");
         }
         else // wrong protocol
-            printf("Unexpected server response.\n");;
+            printf("Unexpected server response.\n");
     }
 }
 
@@ -234,7 +234,7 @@ int receive_LTR_LQR(char *answer, char *text) {
     return 1;
 }
 
-void receive_QUR(char *answer) {
+void receive_QUR(char *answer, char* submit_question) {
     char *token;
 
     token = strtok(answer, " ");
@@ -244,7 +244,9 @@ void receive_QUR(char *answer) {
     else {
         token = strtok(NULL, " \n");
         if (strcmp(token, "OK") == 0) {
-            printf("Question sucessfully submitted.\n");
+            if (question != NULL) free(question);
+            question = strdup(submit_question);
+            printf("Question sucessfully submitted.\nCurrent question: %s\n", question);       
         }
         else if (strcmp(token, "NOK") == 0) {
             printf("Submission not successful\n");
@@ -312,7 +314,7 @@ void get_txtfile(char* filename, char* txt, int length){
         buffer[i] = '\0';
 
         strcpy(txt, buffer);
-
+        free(buffer);
         fclose (f);
     }
     return;
@@ -679,7 +681,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
         }
 
 // TCP FROM NOW ON
-        else if (user_exists && topic != NULL && (strcmp(token, "question_get") == 0 || strcmp(token, "qg") == 0)) {
+        else if (user_exists && (strcmp(token, "question_get") == 0 || strcmp(token, "qg") == 0)) {
             if (ql_available) {
                 char question_title[11];
                 short_cmmd = strcmp(token, "qg") == 0 ? 1 : 0;
@@ -931,7 +933,9 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
                             writeAuthorInformation(topic, question, qUserID, ext);
 
-                            //TODO if reply is not 'QGR EOF' or 'QGR ERR', save question_title as currently selected question
+                            if (question != NULL) free(question);
+                            question = strdup(question_title);
+                            printf("Current question: %s\n", question);
                             close(fd_tcp);
                             used_tcp = 1;
                             free(message);
@@ -1040,7 +1044,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                             if (read(fd_tcp, answer, 1024) == -1) {
                                 exit(ERROR);
                             }
-                            receive_QUR(answer);
+                            receive_QUR(answer, submit_question);
 
                             close(fd_tcp);
                             used_tcp = 1;
@@ -1063,80 +1067,83 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             }
         }
         else if (strcmp(token, "answer_submit") == 0 || strcmp(token, "as") == 0) {
-            char * text_file, * image_file = NULL, * message;
-            char *adata, *idata;
-            int msg_size, asize, isize, i;
-            int qIMG; //flag
-            char * aux = to_validate + strlen(token) + 1;
-            if (validate_qs_as_input(to_validate, 3)) {
-                token = strtok(aux, " ");
-                text_file = calloc(strlen(token) + 5, sizeof(char));
-                sprintf(text_file, "%s.txt", token);
-                token = strtok(NULL, " ");
+            if (question != NULL) {
+                char * text_file, * image_file = NULL, * message;
+                char *adata, *idata;
+                int msg_size, asize, isize, i;
+                int qIMG; //flag
+                char * aux = to_validate + strlen(token) + 1;
+                if (validate_qs_as_input(to_validate, 3)) {
+                    // answer text file
+                    token = strtok(aux, " ");
+                    if (token[strlen(token) -1] == '\n')
+                        token[strlen(token) -1] = '\0';
 
-                printf("curr topic: %s curr question: %s\n", topic, question);
+                    text_file = calloc(strlen(token) + 5, sizeof(char));    
+                    sprintf(text_file, "%s.txt", token);  
 
-                if ((qIMG = token != NULL)){
-                    image_file = strdup(token);
-                    i = strlen(image_file) - 1;
-                    if (image_file[i] == '\n')
-                        image_file[i] = '\0';
-                    printf("image file is: %s\n", image_file);
+                    // answer image file
+                    token = strtok(NULL, " ");
+                    if ((qIMG = token != NULL)){
+                        image_file = strdup(token);
+                        i = strlen(image_file) - 1;
+                        if (image_file[i] == '\n')
+                            image_file[i] = '\0';
+                        printf("image file is: %s\n", image_file);
+                    }
+
+                    printf("Text file is: %s\n", text_file);
+                    asize = get_filesize(text_file);
+                    adata = calloc(asize + 1, sizeof(char));
+
+                    get_txtfile(text_file, adata, asize);
+
+                    if(qIMG) {
+                        isize = get_filesize(image_file);
+                        idata = (char*) malloc (sizeof(char) * (isize));
+                        char ext[4];
+
+                        getExtension(image_file, ext);
+                        get_img(image_file, idata, isize);
+
+                        msg_size = 21 + ndigits(userID) + strlen(topic) + strlen(question) + ndigits(asize) + asize + ndigits(qIMG) + ndigits(isize) + isize;
+
+                        message = calloc(msg_size,sizeof(char));
+                        n = sprintf(message, "ANS %d %s %s %d %s %d %s %d ", userID, topic, question, asize, adata, qIMG, ext,isize);
+                        memcpy(message + n, idata, isize); //copy image to message
+                        printf("Image size: %d\n", isize);
+                        message[n + isize + 1] = '\n';
+
+                        free(idata);
+                        free(image_file);
+                    }
+
+                    else{
+                        msg_size = 17 + strlen(topic) + strlen(question) + ndigits(asize) + asize;
+
+                        message = malloc(sizeof(char) * (msg_size));
+                        int k = sprintf(message, "ANS %d %s %s %d %s 0", userID, topic, question, asize, adata);
+                        message[k] = '\n';
+                    }
+
+                    fd_tcp = create_TCP(hostname,  &res_tcp);
+                    n = connect(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
+                    if (n == -1) exit(1);
+
+                    write_TCP(fd_tcp, message, msg_size); //TODO receive server confirmation
+                    printf("Enviado!\n");
+                    close(fd_tcp);
+                    used_tcp = 1;
+                    free(adata);
+                    free(text_file);
+                    free(message);
                 }
-
-                else{//tirar o \n
-                    i = strlen(text_file) - 1;
-                    text_file[i] = '\0';
+                else {
+                    printf("Invalid command.\nanswer_submit text_file [image_file.ext] /\nas question test_file [image_file.ext]\n");
                 }
-
-                printf("Text file is: %s\n", text_file);
-                asize = get_filesize(text_file);
-                adata = calloc(asize + 1, sizeof(char));
-
-                get_txtfile(text_file, adata, asize);
-
-                if(qIMG) {
-                    isize = get_filesize(image_file);
-                    idata = (char*) malloc (sizeof(char) * (isize));
-                    char ext[4];
-
-                    getExtension(image_file, ext);
-                    get_img(image_file, idata, isize);
-
-                    msg_size = 21 + ndigits(userID) + strlen(topic) + strlen(question) + ndigits(asize) + asize + ndigits(qIMG) + ndigits(isize) + isize;
-
-                    message = calloc(msg_size,sizeof(char));
-                    n = sprintf(message, "ANS %d %s %s %d %s %d %s %d ", userID, topic, question, asize, adata, qIMG, ext,isize);
-                    memcpy(message + n, idata, isize); //copy image to message
-                    printf("Image size: %d\n", isize);
-                    message[n + isize + 1] = '\n';
-
-                    free(idata);
-                    free(image_file);
-                }
-
-                else{
-                    msg_size = 17 + strlen(topic) + strlen(question) + ndigits(asize) + asize;
-
-                    message = malloc(sizeof(char) * (msg_size));
-                    int k = sprintf(message, "ANS %d %s %s %d %s 0", userID, topic, question, asize, adata);
-                    message[k] = '\n';
-                }
-
-                fd_tcp = create_TCP(hostname,  &res_tcp);
-                n = connect(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
-                if (n == -1) exit(1);
-
-                write_TCP(fd_tcp, message, msg_size);
-                printf("Enviado!\n");
-                close(fd_tcp);
-                used_tcp = 1;
-                free(adata);
-                free(text_file);
-                free(message);
             }
             else {
-                printf("Invalid command.\nanswer_submit text_file [image_file.ext] /\nas question test_file [image_file.ext]\n");
+                printf("You must request a question first.\n");
             }
         }
 

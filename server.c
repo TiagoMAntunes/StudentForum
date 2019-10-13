@@ -21,6 +21,7 @@
 #define ERROR       	1
 #define MAX_TOPICS 		99
 #define MAX_QUESTIONS	99
+#define MAX_ANSWERS		99
 #define MAX_REQ_LEN 	1024
 #define ERR_MSG     	"ERR"
 #define ERR_LEN     	4
@@ -323,11 +324,11 @@ int ndigits(int i){
 	}	
 
 	// validates QUS userID topic question qsize
-	int validate_QUS(char *msg) {
+	int validate_QUS_ANS(char *msg, int is_qus) {
 		char *aux = strdup(msg);
 
 		char *token = strtok(aux, " ");	// QUS
-		if (token == NULL || strcmp(token, "QUS") != 0) {
+		if (token == NULL || (is_qus && strcmp(token, "QUS") != 0) || (!is_qus && strcmp(token, "ANS") != 0)) {
 			free(aux);
 			return 0;
 		}
@@ -404,7 +405,7 @@ int ndigits(int i){
 		char *aux = strdup(msg);
 
 		char *token = strtok(aux, " ");	// GQU
-		if (token == NULL || strcmp(token, "GQU") != 0) {
+		if (token == NULL || strcmp(token, "GQU") != 0)  {
 			free(aux);
 			return 0;
 		}
@@ -426,6 +427,11 @@ int ndigits(int i){
 		return msg[4 + len_topic + len_question] == '\n';
 	}
 
+	// validate aIMG [iext isize]
+	int validate_extra_ANS(char *msg) {
+		return validate_extra_QUS(msg);
+	}
+
 
 
 void TCP_input_validation(int fd) {
@@ -442,7 +448,7 @@ void TCP_input_validation(int fd) {
     aux += 4;
     printf("Prefix: %s\n", prefix);
     if (strcmp(prefix, "QUS") == 0) {
-    	if (validate_QUS(message)) {
+    	if (validate_QUS_ANS(message, 1)) {
 	        char topic[11], question[11], userID[6], * qdata, ext[4];
 	        int qsize, qIMG, isize;
 
@@ -663,75 +669,122 @@ void TCP_input_validation(int fd) {
 	    }
 
     } else if (strcmp("ANS", prefix) == 0) {
-        char topic[11], question[11], userID[6], * qdata, ext[4];
-        int qsize, qIMG, isize;
-        printf("ANS inside!\n");
+    	if (validate_QUS_ANS(message, 0)) {
+	        char topic[11], question[11], userID[6], * qdata, ext[4];
+	        int qsize, qIMG, isize;
+	        printf("ANS inside!\n");
 
-        bzero(topic, 11);
-        bzero(question, 11);
-        bzero(userID, 6);
-        bzero(ext, 4);
+	        bzero(topic, 11);
+	        bzero(question, 11);
+	        bzero(userID, 6);
+	        bzero(ext, 4);
 
-        token = strtok(aux, " ");
-        sprintf(userID, token);
+	        token = strtok(aux, " ");
+	        sprintf(userID, token);
 
-        token = strtok(NULL, " ");
-        sprintf(topic, "%s", token);
+	        token = strtok(NULL, " ");
+	        sprintf(topic, "%s", token);
 
-        token = strtok(NULL, " ");
-        sprintf(question, "%s", token);
+	        token = strtok(NULL, " ");
+	        sprintf(question, "%s", token);
 
-        token = strtok(NULL, " ");
-        qsize = atoi(token);
+	        token = strtok(NULL, " ");
+	        qsize = atoi(token);
 
-        aux = token + ndigits(qsize) + 1;
+	        aux = token + ndigits(qsize) + 1;
 
-        int answer_number = answerDirectoriesValidation(topic, question);
+	        // make sure topic and question already exist
+	        int answer_number;
+		    if (questionDirExists(topic, question) && (answer_number = answerDirectoriesValidation(topic, question) < MAX_ANSWERS)) {
 
-        qdata = calloc(BUF_SIZE, sizeof(char));
-        
-        //sprintf(qdata, "%s", aux);
-        memcpy(qdata, aux, MIN(qsize, BUF_SIZE - (aux - message)));
+		        qdata = calloc(BUF_SIZE, sizeof(char));
+		        
+		        //sprintf(qdata, "%s", aux);
+		        memcpy(qdata, aux, MIN(qsize, BUF_SIZE - (aux - message)));
 
-        //in case there's some space available in the buffer, fill it in to avoid bad writes
-        if (BUF_SIZE - (aux - message) < qsize)
-            read(fd, qdata + MIN(qsize, BUF_SIZE - (aux - message)), BUF_SIZE - MIN(qsize, BUF_SIZE - (aux - message)));
+		        //in case there's some space available in the buffer, fill it in to avoid bad writes
+		        if (BUF_SIZE - (aux - message) < qsize)
+		            if (read(fd, qdata + MIN(qsize, BUF_SIZE - (aux - message)), BUF_SIZE - MIN(qsize, BUF_SIZE - (aux - message))) < 0) 
+		            	exit(ERROR);
 
-        int changed = 0;
-        answerWriteTextFile(question, topic, qdata, BUF_SIZE, qsize, fd, &changed, answer_number);
+		        int changed = 0;
+		        answerWriteTextFile(question, topic, qdata, BUF_SIZE, qsize, fd, &changed, answer_number);
 
-        if (changed){
-            read(fd, message, BUF_SIZE);
-            aux = message + 1;
-        } else
-            aux += qsize + 1; 
-        
-        
-        token = strtok(aux, " ");
-        qIMG = atoi(token);
-        
-        if (qIMG) {
-            token = strtok(NULL, " ");
-            sprintf(ext, "%s", token);
 
-            token = strtok(NULL, " ");
-            isize = atoi(token);
-            printf("Prepare to write: %d\n", isize);
-            //reuse qdata for less memory
-            aux = token + ndigits(isize) + 1;
-            memcpy(qdata, aux, MIN(isize, BUF_SIZE - (aux - message)));
+		        if (changed){
+		            if (read(fd, message, BUF_SIZE) < 0) exit(ERROR);
+		            aux = message + 1;
+		        } else
+		            aux += qsize + 1; 
+		        
+		        if (validate_extra_ANS(aux)) {
+		        
+			        token = strtok(aux, " ");
+			        qIMG = atoi(token);
+			        
+			        if (qIMG) {
+			            token = strtok(NULL, " ");
+			            sprintf(ext, "%s", token);
 
-            //in case there's some space available in the buffer, fill it in to avoid bad writes
-            if (BUF_SIZE - (aux - message) < isize) {
-                printf("Sizes: %d %ld\n", isize, BUF_SIZE - (aux - message));
-                read(fd, qdata + MIN(isize, BUF_SIZE - (aux - message)), BUF_SIZE - MIN(isize, BUF_SIZE - (aux - message)));
-            }
+			            token = strtok(NULL, " ");
+			            isize = atoi(token);
+			            printf("Prepare to write: %d\n", isize);
+			            //reuse qdata for less memory
+			            aux = token + ndigits(isize) + 1;
+			            memcpy(qdata, aux, MIN(isize, BUF_SIZE - (aux - message)));
 
-            changed = 0;
-            answerWriteImageFile(question, topic, qdata, BUF_SIZE, isize, fd, &changed, ext, answer_number);
-        }
-        free(qdata);
-        answerWriteAuthorInformation(topic, question, userID, ext, answer_number);
+			            //in case there's some space available in the buffer, fill it in to avoid bad writes
+			            if (BUF_SIZE - (aux - message) < isize) {
+			                printf("Sizes: %d %ld\n", isize, BUF_SIZE - (aux - message));
+			                if (read(fd, qdata + MIN(isize, BUF_SIZE - (aux - message)), BUF_SIZE - MIN(isize, BUF_SIZE - (aux - message))) < 0)
+			                	exit(ERROR);
+			            }
+
+			            changed = 0;
+			            answerWriteImageFile(question, topic, qdata, BUF_SIZE, isize, fd, &changed, ext, answer_number);
+			        }
+			        // validate final \n
+		            token = strtok(qdata, "\n");
+		            int all_clear = (token == NULL ? 0 : 1);
+		        
+			        if (all_clear) {
+			        	answerWriteAuthorInformation(topic, question, userID, ext, answer_number);
+			        	if (write(fd, "QUR OK\n", 7) < 0) exit(ERROR);
+			        	printf("Returned OK information.\n");
+			        }
+			        else {
+			        	answerEraseDirectory(topic, question, answer_number);
+			        	if (write(fd, "ERR\n", 4) < 0) exit(ERROR);
+			    		printf("Returned wrong protocol information.\n");
+			        }
+			        free(qdata);
+			    }
+			    else {	// qIMG [iext isize] are wrong
+			    	printf("img\n");
+			    	if (write(fd, "ANR NOK\n", 8) < 0) exit(ERROR);
+		    		printf("Returned invalid request information.\n");
+			    }
+		    }
+		    // answer list is full
+		    else if (answer_number >= 99) {
+		    	if (write(fd, "ANR FUL\n", 8) < 0) exit(ERROR);
+		    	printf("Returned full list information.\n");
+		    } 
+		    else {	// topic or question non existent
+		    	printf("topic question\n");
+		    	if (write(fd, "ANR NOK\n", 8) < 0) exit(ERROR);
+		    	printf("Returned invalid request information.\n");
+		    }
+	    }
+	    else {	// wrong formulation
+	    	printf("info");
+	    	if (write(fd, "ANR NOK\n", 8) < 0) exit(ERROR);
+	    	printf("Returned invalid request information.\n");
+	    }
+    }
+    else {	// wrong protocol
+    	if (write(fd, "ERR\n", 4) < 0) exit(ERROR);
+    	printf("Returned wrong protocol informarion.\n");
     }
     printf("Son is finished!\n");
 
