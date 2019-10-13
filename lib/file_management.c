@@ -24,6 +24,13 @@ FILE * getQuestionImage(Topic * topic, char * question) {
     return NULL;
 }
 
+void validateReadWrite(FILE *f, char *filename) {
+    if (ferror(f)) {
+        if (filename != NULL) free(filename);
+        fclose(f);
+        exit(1);
+    }
+}
 int fileExists(char *filename) {
     struct stat sb;
     return (stat(filename, &sb) == 0);
@@ -34,13 +41,17 @@ void createTopicDir(char *topic) {
     sprintf(dir, "%s%s/", PREFIX, topic);
     mkdir(PREFIX, 0700); //requires ./topic dir to be created first
     mkdir(dir, 0700);
+    free(dir);
 }
 
 int topicDirExists(char *topic) {
     char *dir = calloc(PREFIX_LEN + strlen(topic) + 2,sizeof(char));
     sprintf(dir, "%s%s/", PREFIX, topic);
     struct stat sb;
-    return (stat(dir, &sb) == 0);
+
+    int flag = (stat(dir, &sb) == 0 ? 1 : 0);
+    free(dir);
+    return flag;
 }
 
 int questionDirExists(char *topic, char *question) {
@@ -48,7 +59,9 @@ int questionDirExists(char *topic, char *question) {
     sprintf(dir, "%s%s/%s/", PREFIX, topic, question);
     struct stat sb;
 
-    return (stat(dir, &sb) == 0);
+    int flag = (stat(dir, &sb) == 0 ? 1 : 0);
+    free(dir);
+    return flag;
 }
 
 int validateDirectories(char * topic, char * question) {
@@ -65,11 +78,14 @@ int validateDirectories(char * topic, char * question) {
         mkdir(dir, 0700);
 
         sprintf(dir, "%s%s/%s/", PREFIX, topic, question);
-        if (mkdir(dir, 0700) < 0)
+        if (mkdir(dir, 0700) < 0){
+            free(dir);
             return 0;
-
+        }
+        free(dir);
         return 1;
     }
+    free(dir);
     return 0;
 }
 
@@ -78,15 +94,21 @@ void eraseDirectory(char *topic, char* question) {
     sprintf(dir, "%s%s/%s/", PREFIX, topic, question);
 
     if (remove(dir) < 0) exit(1);
+    free(dir);
 }
 
 void writeToFile(char * filename, char * buffer, int buffer_size, int total_size, int fd, int * changed) {
     FILE * f = fopen(filename, "w+");
     printf("Opened: %s\n", filename);
     while (total_size > 0) {
+        clearerr(f);
         total_size -= fwrite(buffer, sizeof(char), MIN(total_size, buffer_size), f);
+        validateReadWrite(f, NULL);
         if (total_size > 0) { 
-            read(fd, buffer, MIN(buffer_size, total_size));
+            if (read(fd, buffer, MIN(buffer_size, total_size)) < 0) {
+                fclose(f);
+                exit(1);
+            }
             *changed = 1;
         }
     }
@@ -98,15 +120,26 @@ void readFromFile(char * filename, char * buffer, int buffer_size, int total_siz
     FILE * f = fopen(filename, "r");
     printf("Reading from: %s\n", filename);
     printf("I have to write: %d\n", total_size);
-    int tmp = total_size;
+    
+    clearerr(f);
     int n = fread(buffer, sizeof(char), buffer_size, f);
+    validateReadWrite(f, NULL);
+
     while(total_size > 0) {
-        total_size -= write(fd, buffer, MIN(buffer_size, n));
+        int n_bytes = write(fd, buffer, MIN(buffer_size, n));
+        if (n_bytes < 0) {
+            fclose(f);
+            exit(1);
+        }
+        total_size -= n_bytes;
  //       printf("wrote: %d\n", tmp - total_size);
  //       printf("total size is now: %d\n", total_size);
         if (total_size > 0) {
+            clearerr(f);
             n = fread(buffer, sizeof(char), buffer_size, f);
+            validateReadWrite(f, NULL);
         }
+
     }
     printf("Finished writing!\n");
 //    printf("Current total size: %d\n", total_size);
@@ -119,9 +152,15 @@ void writeAuthorInformation(char * topic, char * question, char * userID, char *
     
     FILE * f = fopen(filename, "w+");
     printf("%d\n", f);
+    clearerr(f);
     fwrite(userID, sizeof(char), 5, f);
+    validateReadWrite(f, filename);
+
     fwrite(" ", sizeof(char), 1, f);
+    validateReadWrite(f, filename);
+
     fwrite(ext, sizeof(char), 3, f);
+    validateReadWrite(f, filename);
 
     fclose(f);
     free(filename);
@@ -133,9 +172,15 @@ void answerWriteAuthorInformation(char * topic, char * question, char * userID, 
     
     FILE * f = fopen(filename, "w+");
     printf("%s\n", filename);
+    clearerr(f);
     fwrite(userID, sizeof(char), 5, f);
+    validateReadWrite(f, filename);
+
     fwrite(" ", sizeof(char), 1, f);
+    validateReadWrite(f, filename);
+
     fwrite(ext, sizeof(char), 3, f);
+    validateReadWrite(f, filename);
 
     fclose(f);
     free(filename);
@@ -146,9 +191,14 @@ void getAuthorInformation(char * topic, char * question, char * userID, char * e
     sprintf(filename, "%s%s/%s/.information", PREFIX, topic, question);
     FILE * f = fopen(filename, "r");
 
+    clearerr(f);
     fread(userID, 5, sizeof(char), f);
+    validateReadWrite(f, filename);
+
     getc(f);
+
     fread(ext, 3, sizeof(char), f);
+    validateReadWrite(f, filename);
 
     fclose(f);
     free(filename);
@@ -159,9 +209,14 @@ void getAnswerInformation(char * answer_dir, char * userID, char * ext) {
     sprintf(filename, "%s.information", answer_dir);
     FILE * f = fopen(filename, "r");
     
+    clearerr(f);
     fread(userID, 5, sizeof(char), f);
+    validateReadWrite(f, filename);
+
     getc(f);
+
     fread(ext, 3, sizeof(char), f);
+    validateReadWrite(f, filename);
 
     fclose(f);
     free(filename);
@@ -172,6 +227,7 @@ void writeTextFile(char * question, char * topic, char * buffer, int buffer_size
     sprintf(filename, "%s%s/%s/question.txt", PREFIX, topic, question);
     
     writeToFile(filename, buffer, buffer_size, qsize, fd, changed);
+    free(filename);
 }
 
 void writeImageFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed, char * ext) {
@@ -179,12 +235,14 @@ void writeImageFile(char * question, char * topic, char * buffer, int buffer_siz
     sprintf(filename, "%s%s/%s/image.%s", PREFIX, topic, question, ext);
     
     writeToFile(filename, buffer, buffer_size, qsize, fd, changed);
+    free(filename);
 }
 
 void createQuestion(char * topic, char * question, char * text, int text_size, char * image, int image_size, char * ext) {
     char * file_text = calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 3 + QUESTION_LEN , sizeof(char));
     char * file_img = calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 3 + IMAGE_LEN + EXT_LEN, sizeof(char));
     char * dir = calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 3,sizeof(char));
+    
     sprintf(file_text, "%s%s/%s/question.txt", PREFIX, topic, question);
     sprintf(file_img, "%s%s/%s/image.%s", PREFIX, topic, question, ext);
     sprintf(dir, "%s%s/%s/", PREFIX, topic, question);
@@ -196,22 +254,37 @@ void createQuestion(char * topic, char * question, char * text, int text_size, c
     if (stat(dir, &sb) == -1) {
         printf("Directories missing. Creating...\n");
 
-        int check = mkdir(PREFIX, 0700);
+        mkdir(PREFIX, 0700);
 
         sprintf(dir, "%s%s/", PREFIX, topic);
-        check = mkdir(dir, 0700);
+        mkdir(dir, 0700);
 
         sprintf(dir, "%s%s/%s/", PREFIX, topic, question);
-        check = mkdir(dir, 0700);
+        mkdir(dir, 0700);
     }
 
-
     FILE * f = fopen(file_text, "w+");
+    clearerr(f);
     fwrite(text, sizeof(char), text_size, f);
+    if (ferror(f)) {
+        free(file_text);
+        free(file_img);
+        free(dir);
+        fclose(f);
+        exit(1);
+    }
     fclose(f);
 
     f = fopen(file_img, "w+");
+    clearerr(f);
     fwrite(image, sizeof(char), image_size, f);
+    if (ferror(f)) {
+        free(file_text);
+        free(file_img);
+        free(dir);
+        fclose(f);
+        exit(1);
+    }
     fclose(f);
 
     free(file_text);
@@ -248,27 +321,37 @@ int answerDirectoriesValidationWithNumber(char * topic, char * question, int ans
     struct stat sb;
     if (stat(dir, &sb) == -1) {
         sprintf(dir, "%s%s/%s/%s_%02d/", PREFIX, topic, question, question, answer_number);
-        int check = mkdir(dir, 0700);
+        mkdir(dir, 0700);
     }
+
+    free(dir);
     return answer_number;
 }
 
 void answerEraseDirectory(char *topic, char *question, int answer_number) {
     char * dir = calloc(PREFIX_LEN + strlen(topic) + 1 + strlen(question) * 2 + 5 + 1,sizeof(char));
     sprintf(dir, "%s%s/%s/%s_%02d/", PREFIX, topic, question, question, answer_number);
-    if (remove(dir) < 0) exit(1);
+    if (remove(dir) < 0) {
+        free(dir);
+        exit(1);
+    }
+    free(dir);
 }
 
 void answerWriteTextFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed, int answer_number) {
     char * file_text = calloc(PREFIX_LEN + strlen(topic) + 1 + strlen(question) * 2 + 5+ strlen("answer.") + EXT_LEN + 1, sizeof(char));
     sprintf(file_text, "%s%s/%s/%s_%02d/answer.txt", PREFIX, topic, question, question, answer_number);
     writeToFile(file_text, buffer, buffer_size, qsize, fd, changed);
+
+    free(file_text);
 }
 
 void answerWriteImageFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed, char * ext, int answer_number) {
     char * file_img = calloc(PREFIX_LEN + strlen(topic) + 1 + strlen(question) * 2 + 5 + strlen("image.") + EXT_LEN + 1, sizeof(char));
     sprintf(file_img, "%s%s/%s/%s_%02d/image.%s", PREFIX, topic, question, question, answer_number, ext);
     writeToFile(file_img, buffer, buffer_size, qsize, fd, changed);
+
+    free(file_img);
 }
 
 void createAnswer(char * topic, char * question, char * text, int text_size, char * image, int image_size, char * ext) {
@@ -278,6 +361,7 @@ void createAnswer(char * topic, char * question, char * text, int text_size, cha
     char * file_text = calloc(PREFIX_LEN + strlen(topic) + 1 + strlen(question) * 2 + 5+ strlen("answer.") + EXT_LEN + 1, sizeof(char));
     char * file_img = calloc(PREFIX_LEN + strlen(topic) + 1 + strlen(question) * 2 + 5 + strlen("image.") + EXT_LEN + 1, sizeof(char));
     char * dir = calloc(PREFIX_LEN + strlen(topic) + 1 + strlen(question) * 2 + 5 + 1,sizeof(char));
+   
     sprintf(file_text, "%s%s/%s/%s_%02d/answer.txt", PREFIX, topic, question, question, answer_number);
     sprintf(file_img, "%s%s/%s/%s_%02d/image.%s", PREFIX, topic, question, question, answer_number, ext);
     sprintf(dir, "%s%s/%s/%s_%02d/", PREFIX, topic, question, question, answer_number);
@@ -289,27 +373,42 @@ void createAnswer(char * topic, char * question, char * text, int text_size, cha
     if (stat(dir, &sb) == -1) {
         printf("Directories missing. Creating...\n");
 
-        int check = mkdir(PREFIX, 0700);
+        mkdir(PREFIX, 0700);
 
         sprintf(dir, "%s%s/", PREFIX, topic);
-        check = mkdir(dir, 0700);
+        mkdir(dir, 0700);
 
         sprintf(dir, "%s%s/%s/", PREFIX, topic, question);
-        check = mkdir(dir, 0700);
+        mkdir(dir, 0700);
 
         sprintf(dir, "%s%s/%s/%s_%02d/", PREFIX, topic, question, question, answer_number);
-        check = mkdir(dir, 0700);
+        mkdir(dir, 0700);
     }
 
 
     FILE * f = fopen(file_text, "w+");
+    clearerr(f);
     fwrite(text, sizeof(char), text_size, f);
+    if (ferror(f)) {
+        free(file_text);
+        free(file_img);
+        free(dir);
+        fclose(f);
+        exit(1);
+    }
     fclose(f);
 
     f = fopen(file_img, "w+");
     fwrite(image, sizeof(char), image_size, f);
-    fclose(f);
+    if (ferror(f)) {
+        free(file_text);
+        free(file_img);
+        free(dir);
+        fclose(f);
+        exit(1);
+    }
 
+    fclose(f);
     free(file_text);
     free(file_img);
     free(dir);
@@ -330,15 +429,18 @@ List * getAnswers(char * topic, char * question, int * count) {
 
     int dir_count = 0;
     int dir_size = strlen(dir_name);
+    char *answer = NULL;
     while (n-- > 0 && dir_count < 10)
       if (namelist[n]->d_type == DT_DIR && strcmp(namelist[n]->d_name, ".") && strcmp(namelist[n]->d_name, "..")) {
-              char * answer = calloc(dir_size + strlen(namelist[n]->d_name) + 2, sizeof(char));
+              answer = calloc(dir_size + strlen(namelist[n]->d_name) + 2, sizeof(char));
               sprintf(answer, "%s%s/", dir_name, namelist[n]->d_name);
               addEl(res, answer);
               dir_count++;
       }
 
     free(namelist);
+    free(dir_name);
+    if (answer != NULL) free(answer);
     *count = dir_count;
     return res;
 }
