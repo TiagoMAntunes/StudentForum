@@ -39,7 +39,7 @@ int create_TCP(char* hostname, struct addrinfo **res) {
     int n, fd;
     struct addrinfo hints;
 
-    memset(&hints, 0, sizeof(hints));
+    if (memset(&hints, 0, sizeof(hints)) == NULL) exit(ERROR);
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_NUMERICSERV;
@@ -57,7 +57,7 @@ int create_TCP(char* hostname, struct addrinfo **res) {
 int create_UDP(char* hostname, struct addrinfo hints, struct addrinfo **res) {
     int n, fd;
 
-    memset(&hints, 0, sizeof(hints));
+    if (memset(&hints, 0, sizeof(hints)) == NULL) exit(ERROR);
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_DGRAM;
     hints.ai_flags = AI_NUMERICSERV;
@@ -223,6 +223,8 @@ void receive_PTR(char* answer, int *tl_available, char *propose_topic, int userI
 
 int receive_LTR_LQR(char *answer, char *text) {
     char *aux = strdup(answer);
+    if (aux == NULL) exit(ERROR);
+
     char *token = strtok(aux, " ");
 
     if (strcmp(token, text) != 0) {
@@ -246,6 +248,7 @@ void receive_QUR(char *answer, char* submit_question) {
         if (token != NULL && strcmp(token, "OK") == 0) {
             if (question != NULL) free(question);
             question = strdup(submit_question);
+            if (question == NULL) exit(ERROR);
             printf("Question successfully submitted.\nCurrent question: %s\n", question);       
         }
         else if (token != NULL && strcmp(token, "NOK") == 0) {
@@ -293,16 +296,23 @@ void receive_ANR(char *answer) {
 int read_TCP(int fd, char** full_msg, int msg_size, int current_offset){
     int n = read(fd, *full_msg + current_offset, msg_size - current_offset);
     int c;
+
+    if (n < 0) exit(ERROR);
     if (n == 0) return msg_size;
     if (n == msg_size) {
         msg_size *= 2;
         *full_msg = realloc(*full_msg, msg_size);
+        if (*full_msg == NULL) exit(ERROR);
     }
     while( (c = read(fd, *full_msg + n + current_offset, msg_size - current_offset - n)) != 0) {
         //printf("Value of c: %d\n", c);
+        if (c < 0) exit(ERROR);
+
         if (c + n >= msg_size)
             msg_size *= 2;
         *full_msg = realloc(*full_msg, msg_size);
+        if (*full_msg == NULL) exit(ERROR);
+
         n += c;
         printf("New size: %d\n", msg_size);
     }
@@ -316,12 +326,10 @@ void write_TCP(int fd, char* reply, int msg_size){
     n = write(fd, reply, msg_size);
     if(n==-1) exit(1);
 
-
     while(n < msg_size){
         n = write(fd, reply + n, msg_size - n);
         if(n==-1) exit(1);
     }
-    //write(1, reply, msg_size);
 }
 
 void get_txtfile(char* filename, char* txt, int length){
@@ -355,10 +363,21 @@ int get_filesize(char* filename){
     f = fopen(filename, "r");
 
     if(f!=NULL){
-        fseek(f, 0, SEEK_END);
-        length = ftell(f);
+        if (fseek(f, 0, SEEK_END) < 0) {
+            fclose(f);
+            exit(ERROR);
+        }
 
-        fseek(f, 0, SEEK_SET);
+        length = ftell(f);
+        if (length < 0) {
+            fclose(f);
+            exit(ERROR);
+        }
+
+        if (fseek(f, 0, SEEK_SET) < 0) {
+            fclose(f);
+            exit(ERROR);
+        }
 
         fclose (f);
     }
@@ -383,14 +402,21 @@ void get_img(char* filename, char* img, int size){
     char buffer[size];
 
     f = fopen(filename, "r");
-
+    clearerr(f);
     if(f!=NULL){
 
         while(!feof(f)) {
             fread(buffer, 1, sizeof(buffer), f);
+            if (ferror(f)) {
+                fclose(f);
+                exit(ERROR);
+            }
         }
 
-        memcpy(img, buffer, size);
+        if (memcpy(img, buffer, size) == NULL) {
+            fclose(f);
+            exit(ERROR);
+        }
 
         fclose (f);
     }
@@ -537,6 +563,8 @@ void getExtension(char * image, char * ext) {
 int validate_qs_as_input(char *input, int n_parts) {
     int n = 0;
     char * aux = strdup(input);
+    if (aux == NULL) exit(ERROR);
+
     char *token = strtok(aux, " ");
 
     while (token != NULL) {
@@ -548,7 +576,6 @@ int validate_qs_as_input(char *input, int n_parts) {
 
     return (n == n_parts) || (n == n_parts - 1);
 }
-
 
 
 void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *res_udp) {
@@ -569,7 +596,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
         char *to_validate = strdup(buffer);
         token = strtok(buffer, " ");
 
-        if (strcmp(token, "reg") == 0 || strcmp(token, "register") == 0) {
+        if (token != NULL && (strcmp(token, "reg") == 0 || strcmp(token, "register") == 0)) {
             token = strtok(NULL, " ");
             stringID = strdup(token);
 
@@ -602,7 +629,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 printf("Invalid command.\nregister userID / reg userID (5 digits)\n");
         }
 
-        else if (user_exists && (strcmp(token, "topic_list\n") == 0 || strcmp(token, "tl\n") == 0)) {
+        else if (token != NULL && user_exists && (strcmp(token, "topic_list\n") == 0 || strcmp(token, "tl\n") == 0)) {
             tl_available = TRUE;
             char *message = malloc(sizeof(char) * 5);
             sprintf(message, "LTP\n");
@@ -626,7 +653,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             free(message);
         }
 
-        else if (user_exists && (strcmp(token, "topic_select") == 0 || strcmp(token, "ts") == 0)) {
+        else if (token != NULL && user_exists && (strcmp(token, "topic_select") == 0 || strcmp(token, "ts") == 0)) {
             if (tl_available) {
                 short_cmmd = strcmp(token, "ts") == 0 ? 1 : 0;
                 token = strtok(NULL, " ");
@@ -646,7 +673,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 printf("Cannot select topic.\nYou must request topic list first.\n");
         }
 
-        else if (user_exists && (strcmp(token, "topic_propose") == 0 || strcmp(token, "tp") == 0)) {
+        else if (token != NULL && user_exists && (strcmp(token, "topic_propose") == 0 || strcmp(token, "tp") == 0)) {
             char *propose_topic, *message;
             token = strtok(NULL, " \n");
             propose_topic = strdup(token);
@@ -678,7 +705,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             free(propose_topic);
         }
 
-        else if (user_exists && (strcmp(token, "question_list\n") == 0|| strcmp(token, "ql\n")) == 0) {
+        else if (token != NULL && user_exists && (strcmp(token, "question_list\n") == 0|| strcmp(token, "ql\n")) == 0) {
             if (topic != NULL) {
                 char * message;
                 int topic_len = strlen(topic);
@@ -716,7 +743,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
         }
 
 // TCP FROM NOW ON
-        else if (user_exists && (strcmp(token, "question_get") == 0 || strcmp(token, "qg") == 0)) {
+        else if (token != NULL && user_exists && (strcmp(token, "question_get") == 0 || strcmp(token, "qg") == 0)) {
             if (ql_available) {
                 char question_title[11];
                 short_cmmd = strcmp(token, "qg") == 0 ? 1 : 0;
@@ -737,6 +764,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     else 
                         strcpy(question_title, token);
 
+                    if (question != NULL) free(question);
                     question = strdup(question_title);
 
                     int msg_size = strlen(question_title) + strlen(topic) + 7;
@@ -968,14 +996,13 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
                             writeAuthorInformation(topic, question, qUserID, ext);
 
-                            if (question != NULL) free(question);
-                            question = strdup(question_title);
                             printf("Current question: %s\n", question);
-                            close(fd_tcp);
                             used_tcp = 1;
                             free(message);
                         }
                     }
+                    freeaddrinfo(res_tcp);
+                    close(fd_udp); 
                 } 
                 else {
                     printf("Invalid command.\nquestion_get question / reg question_number\n");
@@ -986,7 +1013,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             }
         }
 
-        else if (strcmp(token, "question_submit") == 0 || strcmp(token, "qs") == 0) {
+        else if (token != NULL && user_exists && (strcmp(token, "question_submit") == 0 || strcmp(token, "qs") == 0)) {
             if (topic != NULL) {
                 char * submit_question, * text_file, * image_file = NULL, * message;
                 char *qdata, *idata;
@@ -1082,6 +1109,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                             }
                             receive_QUR(answer, submit_question);
 
+                            freeaddrinfo(res_tcp);
                             close(fd_tcp);
                             used_tcp = 1;
                             free(text_file);
@@ -1102,7 +1130,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 printf("You must request question list first.\n");
             }
         }
-        else if (strcmp(token, "answer_submit") == 0 || strcmp(token, "as") == 0) {
+        else if (token != NULL && user_exists && (strcmp(token, "answer_submit") == 0 || strcmp(token, "as") == 0)) {
             if (question != NULL) {
                 char * text_file, * image_file = NULL, * message;
                 char *adata, *idata;
@@ -1175,6 +1203,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     if(read(fd_tcp, answer, 1024) < 0) exit(ERROR);
                     receive_ANR(answer);
 
+                    freeaddrinfo(res_tcp);
                     close(fd_tcp);
                     used_tcp = 1;
                     free(adata);
@@ -1191,7 +1220,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
         }
 
 
-        else if (strcmp(token, "exit\n") == 0) {
+        else if (token != NULL && strcmp(token, "exit\n") == 0) {
             deleteTable(topics_hash);
             freeTopics(topics);
             if (questions_titles != NULL) 
@@ -1199,7 +1228,6 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             free(to_validate);
             if (topic != NULL) free(topic);
             if (question != NULL) free(question);
-            if (used_tcp) freeaddrinfo(res_tcp);
             printf("Goodbye!\n");
             break;
         }
@@ -1208,7 +1236,6 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             printf("You need to login.\n");
         }
         else {
-            printf("%s\n", token);
             printf("Unknown command. Try again.\n");
         }
 
