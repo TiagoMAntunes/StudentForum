@@ -697,8 +697,7 @@ void TCP_input_validation(int fd) {
 
 	        // make sure topic and question already exist
 	        int answer_number;
-		    if (questionDirExists(topic, question) && (answer_number = answerDirectoriesValidation(topic, question) < MAX_ANSWERS)) {
-
+		    if (questionDirExists(topic, question) && (answer_number = answerDirectoriesValidation(topic, question)) < MAX_ANSWERS) {
 		        qdata = calloc(BUF_SIZE, sizeof(char));
 		        
 		        //sprintf(qdata, "%s", aux);

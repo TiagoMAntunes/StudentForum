@@ -882,7 +882,6 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                                     aux = answer;
                                 }
 
-                                
                                 token = strtok(aux, " ");
                                 int answer_number = atoi(token);
                                 aux = token + strlen(token) + 1;
@@ -968,12 +967,12 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                                     }
                                     bzero(qdata, 1024);
                                     int initial_size = MIN(aisize, 1024 - (aux - answer));
-                                    memcpy(qdata, aux, initial_size);
-                                    
+                                    memcpy(qdata, aux, initial_size); 
 
                                     if (1024 - (aux - answer) < aisize) {
                                         initial_size += read(fd_tcp, qdata + initial_size, 1024 - initial_size);
                                     }
+                                    aux += MIN(aisize, 1024 - (aux - answer));
 
                                     changed = 0;
                                     answerWriteImageFile(question, topic, qdata, 1024, aisize, fd_tcp, &changed, ext, answer_number, initial_size);
@@ -990,7 +989,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                         }
                     }
                     freeaddrinfo(res_tcp);
-                    close(fd_udp); 
+                    close(fd_tcp); 
                 } 
                 else {
                     printf("Invalid command.\nquestion_get question / reg question_number\n");
