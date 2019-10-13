@@ -20,6 +20,7 @@ char * getQuestionPath(char * topic, char * question);
 int getNumberOfAnswers(char * topic, char * question);
 
 //Answer
+void answerEraseDirectory(char *topic, char *question, int answer_number);
 void createAnswer(char * topic, char * question, char * text, int text_size, char * image, int image_size, char * ext);
 List * getAnswers(char * topic, char * question, int * count); //change return value later
 int answerDirectoriesValidation(char * topic, char * question);

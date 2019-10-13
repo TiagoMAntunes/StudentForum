@@ -253,6 +253,12 @@ int answerDirectoriesValidationWithNumber(char * topic, char * question, int ans
     return answer_number;
 }
 
+void answerEraseDirectory(char *topic, char *question, int answer_number) {
+    char * dir = calloc(PREFIX_LEN + strlen(topic) + 1 + strlen(question) * 2 + 5 + 1,sizeof(char));
+    sprintf(dir, "%s%s/%s/%s_%02d/", PREFIX, topic, question, question, answer_number);
+    if (remove(dir) < 0) exit(1);
+}
+
 void answerWriteTextFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed, int answer_number) {
     char * file_text = calloc(PREFIX_LEN + strlen(topic) + 1 + strlen(question) * 2 + 5+ strlen("answer.") + EXT_LEN + 1, sizeof(char));
     sprintf(file_text, "%s%s/%s/%s_%02d/answer.txt", PREFIX, topic, question, question, answer_number);
