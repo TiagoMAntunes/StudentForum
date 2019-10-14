@@ -536,7 +536,7 @@ char port[6] = "58017";
 	    int n, fd;
 	    struct addrinfo hints;
 
-	    if (memset(&hints, 0, sizeof(hints)) == NULL) error_on("memset", "createTCP");
+	    memset(&hints, 0, sizeof(hints));
 	    hints.ai_family = AF_INET;
 	    hints.ai_socktype = SOCK_STREAM;
 	    hints.ai_flags = AI_NUMERICSERV;
@@ -553,7 +553,7 @@ char port[6] = "58017";
 	int create_UDP(char* hostname, struct addrinfo hints, struct addrinfo **res) {
 	    int n, fd;
 
-	    if (memset(&hints, 0, sizeof(hints)) == NULL) exit(ERROR);
+	    memset(&hints, 0, sizeof(hints));
 	    hints.ai_family = AF_INET;
 	    hints.ai_socktype = SOCK_DGRAM;
 	    hints.ai_flags = AI_NUMERICSERV;

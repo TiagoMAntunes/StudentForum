@@ -33,6 +33,7 @@ char * getAnswerQuestionPath(char * answer_dir);
 char * getAnswerImagePath(char * answer_dir, char * ext);
 
 // General
+void validateReadWrite(FILE *f, char *filename);
 int validateDirectories(char * topic, char * question);
 void eraseDirectory(char *topic, char* question);
 int fileExists(char *filename);

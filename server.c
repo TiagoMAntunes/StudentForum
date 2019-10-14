@@ -33,6 +33,28 @@
 
 char port[6] = "58017";
 
+
+// ERROR MANAGEMENT
+	void error_on(char *alloc, char *function) {
+		char msg[9 + strlen(alloc) + 3 + strlen(function) + 3];
+		if (sprintf(msg, "Error on %s - %s.\n", alloc, function) < 0) {
+			perror("Error on sprintf - error_on.\n");
+			exit(ERROR);
+		}
+		perror(msg);
+		exit(ERROR);
+	}
+
+	void error_file(char *function) {
+		char msg[21 + strlen(function) + 2];
+		if (sprintf(msg, "File related error - %s.\n", function) < 0) {
+			perror("Error on sprintf - error_file.\n");
+			exit(ERROR);
+		}
+		perror(msg);
+		exit(ERROR);
+	}
+
 void get_img(char* filename, char* img, int size){
     FILE* f;
     char buffer[size];
@@ -40,9 +62,10 @@ void get_img(char* filename, char* img, int size){
     f = fopen(filename, "r");
 
     if(f!=NULL){
-
+    	clearerr(f);
         while(!feof(f)) {
             fread(buffer, 1, sizeof(buffer), f);
+            validateReadWrite(f, filename);
         }
 
         memcpy(img, buffer, size);
@@ -79,19 +102,15 @@ int create_TCP(char* hostname, struct addrinfo hints, struct addrinfo **res) {
     hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
 
     n = getaddrinfo(NULL, port, &hints, res);
-    if (n != 0)
-        exit(ERROR);
+    if (n != 0) error_on("getaddrinfo", "create_TCP");
 
     fd = socket((*res)->ai_family, (*res)->ai_socktype, (*res)->ai_protocol);
-    if (fd == -1)
-        exit(ERROR);
+    if (fd == -1) error_on("socket creation", "create_TCP");
 
     n = bind(fd, (*res)->ai_addr, (*res)->ai_addrlen);
-    if (n == -1)
-        exit(ERROR);
+    if (n == -1) error_on("bind", "create_TCP");
 
-    if (listen(fd, 5) == -1) //mark connection socket as passive
-        exit(ERROR);
+    if (listen(fd, 5) == -1) error_on("listen", "create_TCP");
 
     return fd;
 }
@@ -105,16 +124,13 @@ int create_UDP(char* hostname, struct addrinfo hints, struct addrinfo **res) {
     hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV;
 
     n = getaddrinfo(NULL, port, &hints, res);
-    if (n != 0)
-        exit(ERROR);
+    if (n != 0) error_on("getaddrinfo", "create_UDP");
 
     fd = socket((*res)->ai_family, (*res)->ai_socktype, (*res)->ai_protocol);
-    if (fd == -1)
-        exit(ERROR);
+    if (fd == -1) error_on("socket creation", "create_UDP");
 
     n = bind(fd, (*res)->ai_addr, (*res)->ai_addrlen);
-    if (n == -1)
-        exit(ERROR);
+    if (n == -1) error_on("bind", "create_UDP");
 
     return fd;
 }
@@ -122,13 +138,10 @@ int create_UDP(char* hostname, struct addrinfo hints, struct addrinfo **res) {
 void send_ERR_MSG_UDP(int fd, struct addrinfo **res) {
     int n;
     n = sendto(fd, ERR_MSG, ERR_LEN, 0, (*res)->ai_addr, (*res)->ai_addrlen);
-    if (n == -1) {
-        exit(ERROR);
-    }
+    if (n == -1) error_on("sento", "send_ERR_MSG_UDP");
 }
 
 int registered_user(Hash *users, int userID) {
-    // TODO verificar se o user esta registado
 
     return 1;
 }
@@ -199,16 +212,22 @@ int list_topics(List* topics, int n_topics, char *list) {
 int read_TCP(int fd, char** full_msg, int msg_size, int current_offset){
     int n = read(fd, *full_msg + current_offset, msg_size - current_offset);
     int c;
+    if (n < 0) error_on("read", "read_TCP");
+
     if (n == 0) return msg_size;
+
     if (n == msg_size) {
         msg_size *= 2;
         *full_msg = realloc(*full_msg, msg_size);
+        if (*full_msg == NULL) error_on("realloc", "read_TCP");
     }
     while( (c = read(fd, *full_msg + n + current_offset, msg_size - current_offset - n)) != 0) {
-        //printf("Value of c: %d\n", c);
+        if (c < 0) error_on("read", "read_TCP");
+
         if (c + n >= msg_size)
             msg_size *= 2;
         *full_msg = realloc(*full_msg, msg_size);
+        if (*full_msg == NULL) error_on("realloc", "read_TCP");
         n += c;
     }
     (*full_msg)[n-1] = '\0';
@@ -219,14 +238,14 @@ void write_TCP(int fd, char* reply, int msg_size){
     int n;
 
     n = write(fd, reply, msg_size);
-    if(n==-1) exit(1);
+    if(n==-1) error_on("write", "write_TCP");
 
 
     while(n < msg_size){
         n = write(fd, reply + n, msg_size - n);
-        if(n==-1) exit(1);
+        if(n==-1) error_on("write", "write_TCP");;
     }
-    write(1, reply, msg_size);
+    if (write(1, reply, msg_size) < 0) error_on("write", "write_TCP");
 }
 
 int is_number(char *text) {
@@ -325,6 +344,7 @@ int ndigits(int i){
 	// validates QUS userID topic question qsize
 	int validate_QUS_ANS(char *msg, int is_qus) {
 		char *aux = strdup(msg);
+		if (aux == NULL) error_on("strdup", "validate_QUS_ANS");
 
 		char *token = strtok(aux, " ");	// QUS
 		if (token == NULL || (is_qus && strcmp(token, "QUS") != 0) || (!is_qus && strcmp(token, "ANS") != 0)) {
@@ -367,6 +387,7 @@ int ndigits(int i){
 	// validate qIMG [iext isize]
 	int validate_extra_QUS(char *msg) {
 		char *aux = strdup(msg);
+		if (aux == NULL) error_on("strdup", "validate_extra_QUS");
 		char *token = strtok(aux, " ");
 
 		// qIMG
@@ -397,11 +418,13 @@ int ndigits(int i){
 			return 1;
 		}
 
+		free(aux);
 		return 0;
 	}
 
 	int validate_GQU(char *msg) {
 		char *aux = strdup(msg);
+		if (aux == NULL) error_on("strdup", "validate_GQU");
 
 		char *token = strtok(aux, " ");	// GQU
 		if (token == NULL || strcmp(token, "GQU") != 0)  {
@@ -439,9 +462,7 @@ void TCP_input_validation(int fd) {
 
     bzero(message, BUF_SIZE);
     bzero(prefix, 4);
-    if (read(fd, message, BUF_SIZE) == -1) {
-    	exit(ERROR);
-    }
+    if (read(fd, message, BUF_SIZE) == -1) error_on("read", "TCP_input_validation");
     printf("Message: %s\n", message);
     memcpy(prefix, aux, 3);
     aux += 4;
@@ -482,20 +503,24 @@ void TCP_input_validation(int fd) {
 			        if (validateDirectories(topic, question)) {	
 
 				        qdata = calloc(BUF_SIZE, sizeof(char));
+				        if (qdata == NULL) error_on("calloc", "TCP_input_validation");
 				        
 						int initial_size = MIN(qsize, BUF_SIZE - (aux - message));
 				        //sprintf(qdata, "%s", aux);
 				        memcpy(qdata, aux, initial_size);
 
 				        //in case there's some space available in the buffer, fill it in to avoid bad writes
-				        if (BUF_SIZE - (aux - message) < qsize)
-				            initial_size += read(fd, qdata + initial_size, BUF_SIZE - initial_size);
+				        if (BUF_SIZE - (aux - message) < qsize) {
+				        	int bytes_read = read(fd, qdata + initial_size, BUF_SIZE - initial_size);
+				        	if (bytes_read < 0) error_on("read", "TCP_input_validation"); 
+				            initial_size += bytes_read;
+				        }
 
 				        int changed = 0;
 				        writeTextFile(question, topic, qdata, BUF_SIZE, qsize, fd, &changed, initial_size);
 				        
 				        if (changed){
-				            read(fd, message, BUF_SIZE);
+				            if (read(fd, message, BUF_SIZE) < 0) error_on("read", "TCP_input_validation");
 				            aux = message + 1;
 				        } else
 				            aux += qsize + 1; 
@@ -507,7 +532,7 @@ void TCP_input_validation(int fd) {
 					        qIMG = atoi(token);
 					        if (qIMG) {
 					            token = strtok(NULL, " ");
-					            sprintf(ext, "%s", token);
+					            if (sprintf(ext, "%s", token) < 0) error_on("sprintf", "TCP_input_validation");
 
 					            token = strtok(NULL, " ");
 					            isize = atoi(token);
@@ -520,8 +545,9 @@ void TCP_input_validation(int fd) {
 					            //in case there's some space available in the buffer, fill it in to avoid bad writes
 					            if (BUF_SIZE - (aux - message) < isize) {
 					                printf("Sizes: %d %ld\n", isize, initial_size);
+
 					                if ((initial_size += read(fd, qdata + initial_size, BUF_SIZE - initial_size)) < 0)
-					                	exit(ERROR);
+					                	error_on("read", "TCP_input_validation");
 					            }
 
 					            changed = 0;
@@ -533,39 +559,39 @@ void TCP_input_validation(int fd) {
 					        }
 					        if (all_clear) {
 					        	writeAuthorInformation(topic, question, userID, ext);
-					        	if (write(fd, "QUR OK\n", 7) < 0) exit(ERROR);
+					        	if (write(fd, "QUR OK\n", 7) < 0) error_on("write", "TCP_input_validation");
 					        	printf("Returned OK information.\n");
 					        }
 					        else {
 					        	eraseDirectory(topic, question);
-					        	if (write(fd, "ERR\n", 4) < 0) exit(ERROR);
+					        	if (write(fd, "ERR\n", 4) < 0) error_on("write", "TCP_input_validation");
 					    		printf("Returned wrong protocol information.\n");
 					        }
 					        free(qdata);
 					    }
 					    else {
 					    	eraseDirectory(topic, question);
-					    	if (write(fd, "ERR\n", 4) < 0) exit(ERROR);
+					    	if (write(fd, "ERR\n", 4) < 0) error_on("write", "TCP_input_validation");
 					    	printf("Returned wrong protocol information.\n");
 					    }
 				    }
 				    else {
-				    	if (write(fd, "QUR DUP\n", 8) < 0) exit(ERROR);
+				    	if (write(fd, "QUR DUP\n", 8) < 0) error_on("write", "TCP_input_validation");
 				    	printf("Returned duplication information.\n");
 				    }
 				}
 				else {
-					if (write(fd, "QUR NOK\n", 8) < 0) exit(ERROR);
+					if (write(fd, "QUR NOK\n", 8) < 0) error_on("write", "TCP_input_validation");
 					printf("Returned invalid request information.\n");
 				}
 		    }
 			else {
-	    		if (write(fd, "QUR FUL\n", 8) < 0) exit(ERROR);
+	    		if (write(fd, "QUR FUL\n", 8) < 0) error_on("write", "TCP_input_validation");
 	    		printf("Returned full list information.\n");
 	    	}
 		}
 		else {
-			if (write(fd, "ERR\n", 4) < 0) exit(ERROR);
+			if (write(fd, "ERR\n", 4) < 0) error_on("write", "TCP_input_validation");
 			printf("Returned wrong protocol information.\n");
 		}
 	    
@@ -600,7 +626,7 @@ void TCP_input_validation(int fd) {
 
 		        int txt_size = get_filesize(txtfile);
 		        sprintf(message, "QGR %s %d ", userID, get_filesize(txtfile));
-		        if (write(fd, message, strlen(message)) < 0) exit(ERROR);
+		        if (write(fd, message, strlen(message)) < 0) error_on("write", "TCP_input_validation");
 		        
 		        readFromFile(txtfile, message, BUF_SIZE, txt_size, fd);
 
@@ -608,22 +634,22 @@ void TCP_input_validation(int fd) {
 		        sprintf(message, " %d ", qIMG);
 		        if (qIMG) {
 		            int image_size = get_filesize(imgfile);
-		            sprintf(message + 3, "%s %d ", ext, image_size);
-		            if (write(fd, message, 3 + strlen(ext) + ndigits(image_size) + 2) < 0) exit(ERROR);
-		            if (write(1, message, 3 + strlen(ext) + ndigits(image_size) + 2) < 0) exit(ERROR);
+		            if (sprintf(message + 3, "%s %d ", ext, image_size) < 0) error_on("sprintf", "TCP_input_validation");
+		            if (write(fd, message, 3 + strlen(ext) + ndigits(image_size) + 2) < 0) error_on("write", "TCP_input_validation");
+		            if (write(1, message, 3 + strlen(ext) + ndigits(image_size) + 2) < 0) error_on("write", "TCP_input_validation");
 		            readFromFile(imgfile, message, BUF_SIZE, image_size, fd);
 		        }
 		        char * aux = message;
 		        if (answers_number > 0){
-		            sprintf(message, " %d", answers_number);
+		            if (sprintf(message, " %d", answers_number) < 0) error_on("sprintf", "TCP_input_validation");
 		            aux += 2;
 		        }
 		        else {
-		            sprintf(message, " 0\n");
+		            if (sprintf(message, " 0\n") < 0) error_on("sprintf", "TCP_input_validation"); 
 		            aux += 3;
 		        }
 		        
-		        if (write(fd, message, aux - message) < 0) exit(ERROR);
+		        if (write(fd, message, aux - message) < 0) error_on("write", "TCP_input_validation");
 		        
 		        it = createIterator(answers);
 		        int question_count = 1;
@@ -637,35 +663,35 @@ void TCP_input_validation(int fd) {
 		            txtfile = getAnswerQuestionPath(answer_name);
 		            imgfile = getAnswerImagePath(answer_name, ext);
 		            txt_size = get_filesize(txtfile);
-		            sprintf(message, " %02d %s %d ", question_count++, userID, txt_size);
+		            if (sprintf(message, " %02d %s %d ", question_count++, userID, txt_size) < 0) error_on("sprintf", "TCP_input_validation");
 
-		            if (write(fd, message, strlen(message)) < 0) exit(ERROR);
+		            if (write(fd, message, strlen(message)) < 0) error_on("write", "TCP_input_validation");
 		            printf("I'm gonna read from %s\n", txtfile);
 		            readFromFile(txtfile, message, BUF_SIZE, txt_size, fd);
 
 		            qIMG = imgfile != NULL ? 1 : 0;
-		            sprintf(message, " %d", qIMG);
-		            if (write(fd, message, strlen(message)) < 0) exit(ERROR);
+		            if (sprintf(message, " %d", qIMG) < 0) error_on("sprintf", "TCP_input_validation");
+		            if (write(fd, message, strlen(message)) < 0) error_on("write", "TCP_input_validation");
 
 		            if (qIMG) {
 		                int image_size = get_filesize(imgfile);
-		                sprintf(message, " %s %d ", ext, image_size);
-		                if (write(fd, message, strlen(message)) < 0) exit(ERROR);
+		                if (sprintf(message, " %s %d ", ext, image_size) < 0) error_on("sprintf", "TCP_input_validation");
+		                if (write(fd, message, strlen(message)) < 0) error_on("write", "TCP_input_validation");
 		                
 		                readFromFile(imgfile, message, BUF_SIZE, image_size, fd);
 		                
 		            }
 		        }
-		        if (write(fd, "\n", 1) < 0) exit(ERROR);
+		        if (write(fd, "\n", 1) < 0) error_on("write", "TCP_input_validation");
 		        free(txtfile);
 		    }
 	    	else {
-	    		if (write(fd, "QGR ERR\n", 8) < 0) exit(ERROR);
+	    		if (write(fd, "QGR ERR\n", 8) < 0) error_on("write", "TCP_input_validation");
 	    		printf("Returned invalid request information.\n");
 	    	}
 	    }
 	    else {
-	    	if (write(fd, "ERR\n", 4) < 0) exit(ERROR);
+	    	if (write(fd, "ERR\n", 4) < 0) error_on("write", "TCP_input_validation");
 	    	printf("Returned wrong protocol information.\n");
 	    }
 
@@ -681,13 +707,13 @@ void TCP_input_validation(int fd) {
 	        bzero(ext, 4);
 
 	        token = strtok(aux, " ");
-	        sprintf(userID, token);
+	        if (sprintf(userID, token) < 0) error_on("sprintf", "TCP_input_validation");
 
 	        token = strtok(NULL, " ");
-	        sprintf(topic, "%s", token);
+	        if (sprintf(topic, "%s", token) < 0) error_on("sprintf", "TCP_input_validation");
 
 	        token = strtok(NULL, " ");
-	        sprintf(question, "%s", token);
+	        if (sprintf(question, "%s", token) < 0) error_on("sprintf", "TCP_input_validation");
 
 	        token = strtok(NULL, " ");
 	        qsize = atoi(token);
@@ -698,6 +724,7 @@ void TCP_input_validation(int fd) {
 	        int answer_number;
 		    if (questionDirExists(topic, question) && (answer_number = answerDirectoriesValidation(topic, question)) < MAX_ANSWERS) {
 		        qdata = calloc(BUF_SIZE, sizeof(char));
+		        if (qdata == NULL) error_on("calloc", "TCP_input_validation");
 		        
 		        //sprintf(qdata, "%s", aux);
 				int initial_size = MIN(qsize, BUF_SIZE - (aux - message));
@@ -706,14 +733,14 @@ void TCP_input_validation(int fd) {
 		        //in case there's some space available in the buffer, fill it in to avoid bad writes
 		        if (BUF_SIZE - (aux - message) < qsize)
 		            if ((initial_size += read(fd, qdata + initial_size, BUF_SIZE - initial_size)) < 0) 
-		            	exit(ERROR);
+		            	error_on("read", "TCP_input_validation");
 
 		        int changed = 0;
 		        answerWriteTextFile(question, topic, qdata, BUF_SIZE, qsize, fd, &changed, answer_number, initial_size);
 
 
 		        if (changed){
-		            if (read(fd, message, BUF_SIZE) < 0) exit(ERROR);
+		            if (read(fd, message, BUF_SIZE) < 0) error_on("read", "TCP_input_validation");
 		            aux = message + 1;
 		        } else
 		            aux += qsize + 1; 
@@ -725,7 +752,7 @@ void TCP_input_validation(int fd) {
 			        
 			        if (qIMG) {
 			            token = strtok(NULL, " ");
-			            sprintf(ext, "%s", token);
+			            if (sprintf(ext, "%s", token) < 0) error_on("sprintf", "TCP_input_validation");
 
 			            token = strtok(NULL, " ");
 			            isize = atoi(token);
@@ -740,7 +767,7 @@ void TCP_input_validation(int fd) {
 			            if (BUF_SIZE - (aux - message) < isize) {
 			                printf("Sizes: %d %ld\n", isize, BUF_SIZE - (aux - message));
 			                if ((initial_size += read(fd, qdata + initial_size, BUF_SIZE - initial_size)) < 0)
-			                	exit(ERROR);
+			                	error_on("read", "TCP_input_validation");
 			            }
 
 			            changed = 0;
@@ -752,40 +779,40 @@ void TCP_input_validation(int fd) {
 		        
 			        if (all_clear) {
 			        	answerWriteAuthorInformation(topic, question, userID, ext, answer_number);
-			        	if (write(fd, "ANR OK\n", 7) < 0) exit(ERROR);
+			        	if (write(fd, "ANR OK\n", 7) < 0) error_on("write", "TCP_input_validation");
 			        	printf("Returned OK information.\n");
 			        }
 			        else {
 			        	answerEraseDirectory(topic, question, answer_number);
-			        	if (write(fd, "ERR\n", 4) < 0) exit(ERROR);
+			        	if (write(fd, "ERR\n", 4) < 0) error_on("write", "TCP_input_validation");
 			    		printf("Returned wrong protocol information.\n");
 			        }
 			        free(qdata);
 			    }
 			    else {	// qIMG [iext isize] are wrong
-			    	if (write(fd, "ANR NOK\n", 8) < 0) exit(ERROR);
+			    	if (write(fd, "ANR NOK\n", 8) < 0) error_on("write", "TCP_input_validation");
 		    		printf("Returned invalid request information.\n");
 			    }
 		    }
 		    // answer list is full
 		    else if (answer_number >= 99) {
-		    	if (write(fd, "ANR FUL\n", 8) < 0) exit(ERROR);
+		    	if (write(fd, "ANR FUL\n", 8) < 0) error_on("write", "TCP_input_validation");
 		    	printf("Returned full list information.\n");
 		    } 
 		    else {	// topic or question non existent
 		    	printf("topic question\n");
-		    	if (write(fd, "ANR NOK\n", 8) < 0) exit(ERROR);
+		    	if (write(fd, "ANR NOK\n", 8) < 0) error_on("write", "TCP_input_validation");
 		    	printf("Returned invalid request information.\n");
 		    }
 	    }
 	    else {	// wrong formulation
 	    	printf("info");
-	    	if (write(fd, "ANR NOK\n", 8) < 0) exit(ERROR);
+	    	if (write(fd, "ANR NOK\n", 8) < 0) error_on("write", "TCP_input_validation");
 	    	printf("Returned invalid request information.\n");
 	    }
     }
     else {	// wrong protocol
-    	if (write(fd, "ERR\n", 4) < 0) exit(ERROR);
+    	if (write(fd, "ERR\n", 4) < 0) error_on("write", "TCP_input_validation");
     	printf("Returned wrong protocol informarion.\n");
     }
     printf("Son is finished!\n");
@@ -833,18 +860,18 @@ int main(int argc, char *argv[])
         FD_SET(fd_tcp, &set);
         FD_SET(fd_udp, &set);
         int fd_ready = select(maxfd, &set, NULL, NULL, NULL);
+        if (fd_ready < 0) error_on("select", "main");
 
         if (FD_ISSET(fd_tcp, &set)) {
             printf("Receiving from TCP client.\n");
             user_addrlen = sizeof(user_addr);
             if ((newfd = accept(fd_tcp, (struct sockaddr *)&user_addr, &user_addrlen)) == -1)
-                exit(ERROR);
+                error_on("accept", "main");
 
             else {
                 pid = fork();
                 if (pid < 0) {
-                    printf("Unable to fork");
-                    exit(ERROR);
+                    error_on("fork", "main");
                 }
                 else if (pid == 0){ //Child process
                     printf("dei fork\n");
@@ -852,12 +879,13 @@ int main(int argc, char *argv[])
 
                     int msg_size = MAX_REQ_LEN;
                     char * message = calloc(msg_size, sizeof(char));
+                    if (message == NULL) error_on("calloc", "main");
 
                     /*msg_size = read_TCP(newfd, &message, msg_size, 0);
                     printf("Message received: %s\n", message);*/
                     TCP_input_validation(newfd);
                     free(message);
-                    exit(0);
+                    return 0;
 
                 }
                 else { //parent process
@@ -871,37 +899,44 @@ int main(int argc, char *argv[])
 
             bzero(buffer, 1024);
             int n = recvfrom(fd_udp, buffer, 1024, 0, (struct sockaddr *) &user_addr, &user_addrlen);
-            if (n == -1)
-                exit(ERROR);
+            if (n == -1) error_on("recvfrom", "main");
 
             printf("Message received: %s\n", buffer);
-            char *to_validate = strdup(buffer); // preciso para validar protocolo
-            char *to_token = strdup(buffer);    // os strtok do PTP so funcionam co esta linha
+            char *to_validate = strdup(buffer); 
+            char *to_token = strdup(buffer);    
+            if (to_validate == NULL || to_token == NULL) error_on("strdup", "main");
+
             char * token = strtok(buffer, " \n");
-            if (strcmp(token, "REG") == 0) {
+            if (token != NULL && strcmp(token, "REG") == 0) {
                 if (validate_REG(to_validate)) {
                     n = sendto(fd_udp, "RGR OK\n", 7, 0, (struct sockaddr *) &user_addr, user_addrlen);
-                	if (n == -1)
-                        exit(ERROR);
+                	if (n == -1) error_on("sendto", "main");
                 }
                 else {
                     send_ERR_MSG_UDP(fd_udp, &res_udp);
                 }
-            } else if (strcmp(token, "LTP") == 0) {
+            } else if (token != NULL && strcmp(token, "LTP") == 0) {
                 if (validate_LTP(to_validate)) {
                     if (n_topics > 0) {
                         char *list = (char*) malloc(sizeof(char) * 17 * n_topics);
+                        if (list == NULL) error_on("malloc", "main");
                         int list_size = list_topics(topics, n_topics, list);
+
                         char *message = malloc(sizeof(char) * (7 + list_size));
-                        sprintf(message, "LTR %d %s\n", n_topics, list);
+                        if (message == NULL) error_on("malloc", "main");
+
+                        if (sprintf(message, "LTR %d %s\n", n_topics, list) < 0) error_on("sprintf", "main");
 
                         n = sendto(fd_udp, message, 6 + list_size, 0, (struct sockaddr *) &user_addr, user_addrlen);
+                        if (n < 0) error_on("sendto", "main");
 
                         free(list);
                         free(message);
                     }
-                    else
+                    else {
                         n = sendto(fd_udp, "LTR 0\n", 6, 0, (struct sockaddr *) &user_addr, user_addrlen);
+                    	if (n < 0) error_on("sento", "main");
+                    }
                 }
                  else {
                     send_ERR_MSG_UDP(fd_udp, &res_udp);
@@ -914,30 +949,33 @@ int main(int argc, char *argv[])
                     // userID
                     token = strtok(NULL, " ");
                     char *stringID = strdup(token);
+                    if (stringID == NULL) error_on("strdup", "main");
 
                     // topic
                     token = strtok(NULL, " \n");
                     char *topic_title = strdup(token);
+                    if (topic_title == NULL) error_on("strdup", "main");
 
 
                     if (n_topics == MAX_TOPICS) {
                         n = sendto(fd_udp, "PTR FUL\n", 8, 0, (struct sockaddr *) &user_addr, user_addrlen);
-                        if (n == -1)
-                            exit(ERROR);
+                        if (n == -1) error_on("sendto", "main");
+
+                        printf("Returned full list information.\n");
                     }
 
                     else if (!registered_user(users, atoi(stringID)) || strlen(topic_title) > 10) {
                         n = sendto(fd_udp, "PTR NOK\n", 8, 0, (struct sockaddr *) &user_addr, user_addrlen);
-                        if (n == -1)
-                            exit(ERROR);
+                        if (n == -1) error_on("sendto", "main");
+
                         printf("Returned invalid request information.\n");
                     }
 
                     else if (topic_exists(topics, topic_title)) {
                         n = sendto(fd_udp, "PTR DUP\n", 8, 0, (struct sockaddr *) &user_addr, user_addrlen);
+                        if (n == -1) error_on("sendto", "main");
+
                         printf("Returned duplication information\n");
-                        if (n == -1)
-                            exit(ERROR);
                     }
 
                     else {
@@ -948,8 +986,8 @@ int main(int argc, char *argv[])
                         n_topics++;
 
                         n = sendto(fd_udp, "PTR OK\n", 7, 0, (struct sockaddr *) &user_addr, user_addrlen);
-                        if (n == -1)
-                            exit(ERROR);
+                        if (n == -1) error_on("sendto", "main");
+
                         printf("Returned OK information\n");
                     }
 
@@ -977,10 +1015,11 @@ int main(int argc, char *argv[])
 
                     //Create message data
                     char * message = calloc(7 + ndigits(n_questions) + n_questions * (10 + 1 + 5 + 1 + 2), sizeof(char));
+                    if (message == NULL) error_on("calloc", "main");
                     char * msg_help = message;
 
                     //LQR N
-                    sprintf(msg_help, "LQR %d", (n_questions == 0 ? 0 : n_questions));
+                    if (sprintf(msg_help, "LQR %d", (n_questions == 0 ? 0 : n_questions)) < 0) error_on("sprintf", "main");
                     msg_help += (n_questions == 0 ? 5 : 4 + ndigits(n_questions));
                     
                     //populate with the amount of questions
@@ -995,13 +1034,13 @@ int main(int argc, char *argv[])
                             int n = getNumberOfAnswers(token, question);
                             char n_answers[3];
                             if (n < 9) {
-                            	sprintf(n_answers, "0%d", n);
+                            	if (sprintf(n_answers, "0%d", n) < 0) error_on("sprintf", "main");
                             }
                             else {
-                            	sprintf(n_answers, "%d", n);
+                            	if (sprintf(n_answers, "%d", n) < 0) error_on("sprintf", "main");
                             }
 
-                            sprintf(msg_help, " %s:%s:%s", question, userID, n_answers);
+                            if (sprintf(msg_help, " %s:%s:%s", question, userID, n_answers) < 0) error_on("sprintf", "main");
                             msg_help += 10 + strlen(question);
                             j--;
                             free(question);
@@ -1017,17 +1056,13 @@ int main(int argc, char *argv[])
                     printf("Char: %c with value %d\n", *msg_help, *msg_help);
                     printf("String: \"%s\" with size: %ld\n", message, strlen(message));
                     n = sendto(fd_udp, message, strlen(message), 0, (struct sockaddr *) &user_addr, user_addrlen);
-
+                    if (n < 0) error_on("sendto", "main");
                 }
                 else {
                     send_ERR_MSG_UDP(fd_udp, &res_udp);
                 }
 
             }
-
-            printf("n:%d errno:%d\n", n, errno);
-            if (n == -1)
-                exit(ERROR);
 
             free(to_validate);
             free(to_token);
