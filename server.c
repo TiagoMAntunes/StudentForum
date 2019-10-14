@@ -271,6 +271,28 @@ int ndigits(int i){
     return count;
 }
 
+void freeAnswers(List *l) {
+	Iterator *it = createIterator(l);
+
+    while(hasNext(it)) {
+        free(current(next(it)));
+    }
+
+    listFree(l);
+    killIterator(it);
+}
+
+void freeTopics(List *topics) {
+	Iterator *it = createIterator(topics);
+
+    while(hasNext(it)) {
+        deleteTopic(current(next(it)));
+    }
+
+    listFree(topics);
+    killIterator(it);
+}
+
 // PROTOCOL VALIDATION
 	int validate_REG(char *msg) {
 		if (msg[strlen(msg) - 1] != '\n')
@@ -615,8 +637,9 @@ void TCP_input_validation(int fd) {
 
 		        Iterator * it = createIterator(answers);
 		        printf("Available answers:\n");
-		        while (hasNext(it))
-		            printf("%s\n", current(next(it)));
+		        while (hasNext(it)) {
+		            printf("%s\n", (char*) current(next(it)));
+		        }
 		        killIterator(it);
 
 		        bzero(message, BUF_SIZE);
@@ -642,7 +665,7 @@ void TCP_input_validation(int fd) {
 		        char * aux = message;
 		        if (answers_number > 0){
 		            if (sprintf(message, " %d", answers_number) < 0) error_on("sprintf", "TCP_input_validation");
-		            aux += 2;
+		            aux += 1 + ndigits(answers_number);
 		        }
 		        else {
 		            if (sprintf(message, " 0\n") < 0) error_on("sprintf", "TCP_input_validation"); 
@@ -671,6 +694,7 @@ void TCP_input_validation(int fd) {
 
 		            qIMG = imgfile != NULL ? 1 : 0;
 		            if (sprintf(message, " %d", qIMG) < 0) error_on("sprintf", "TCP_input_validation");
+		            printf("message: %s\n", message);
 		            if (write(fd, message, strlen(message)) < 0) error_on("write", "TCP_input_validation");
 
 		            if (qIMG) {
@@ -683,7 +707,10 @@ void TCP_input_validation(int fd) {
 		            }
 		        }
 		        if (write(fd, "\n", 1) < 0) error_on("write", "TCP_input_validation");
+		        if (imgfile != NULL) free(imgfile);
 		        free(txtfile);
+		        freeAnswers(answers);
+		        killIterator(it);
 		    }
 	    	else {
 	    		if (write(fd, "QGR ERR\n", 8) < 0) error_on("write", "TCP_input_validation");
@@ -707,7 +734,7 @@ void TCP_input_validation(int fd) {
 	        bzero(ext, 4);
 
 	        token = strtok(aux, " ");
-	        if (sprintf(userID, token) < 0) error_on("sprintf", "TCP_input_validation");
+	        if (sprintf(userID, "%s", token) < 0) error_on("sprintf", "TCP_input_validation");
 
 	        token = strtok(NULL, " ");
 	        if (sprintf(topic, "%s", token) < 0) error_on("sprintf", "TCP_input_validation");
@@ -800,13 +827,11 @@ void TCP_input_validation(int fd) {
 		    	printf("Returned full list information.\n");
 		    } 
 		    else {	// topic or question non existent
-		    	printf("topic question\n");
 		    	if (write(fd, "ANR NOK\n", 8) < 0) error_on("write", "TCP_input_validation");
 		    	printf("Returned invalid request information.\n");
 		    }
 	    }
 	    else {	// wrong formulation
-	    	printf("info");
 	    	if (write(fd, "ANR NOK\n", 8) < 0) error_on("write", "TCP_input_validation");
 	    	printf("Returned invalid request information.\n");
 	    }
@@ -815,6 +840,7 @@ void TCP_input_validation(int fd) {
     	if (write(fd, "ERR\n", 4) < 0) error_on("write", "TCP_input_validation");
     	printf("Returned wrong protocol informarion.\n");
     }
+
     printf("Son is finished!\n");
 
 }
@@ -883,8 +909,13 @@ int main(int argc, char *argv[])
 
                     /*msg_size = read_TCP(newfd, &message, msg_size, 0);
                     printf("Message received: %s\n", message);*/
+                    freeaddrinfo(res_udp);
                     TCP_input_validation(newfd);
                     free(message);
+                    freeaddrinfo(res_tcp);
+                    deleteTable(users);
+                    deleteTable(topics_hash);
+                    freeTopics(topics);
                     return 0;
 
                 }
@@ -1057,6 +1088,8 @@ int main(int argc, char *argv[])
                     printf("String: \"%s\" with size: %ld\n", message, strlen(message));
                     n = sendto(fd_udp, message, strlen(message), 0, (struct sockaddr *) &user_addr, user_addrlen);
                     if (n < 0) error_on("sendto", "main");
+
+                    free(message);
                 }
                 else {
                     send_ERR_MSG_UDP(fd_udp, &res_udp);

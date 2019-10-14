@@ -65,7 +65,7 @@ int listSize(List *l) {
         n++;
         next(it);
     }
-
+    killIterator(it);
     return n;
     
 }

@@ -921,15 +921,16 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                             }
 
                             token = strtok(aux, " ");
-                            
                             int N = atoi(token);
                             aux = token + strlen(token) + 1;
                             
+                            printf("N = %d\n", N);
                             while (N-- > 0) {
                                 
                                 if (aux - answer >= n) {
                                     bzero(answer, 1024);
                                     while ((n = read(fd_tcp, answer, 1024)) == 0) ;
+
                                     if (n < 0) error_on("read", "receive_input");
 
                                     aux = answer;

@@ -32,6 +32,16 @@ void validateReadWrite(FILE *f, char *filename) {
         exit(1);
     }
 }
+
+void validateOpen(FILE *f, char* filename) {
+	char msg [21 + strlen(filename)];
+	sprintf(msg, "Error opening file: %s\n", filename);
+	if (f == NULL) {
+		perror(msg);
+		exit(EXIT_FAILURE);
+	}
+}
+
 int fileExists(char *filename) {
     struct stat sb;
     return (stat(filename, &sb) == 0);
@@ -103,6 +113,8 @@ void eraseDirectory(char *topic, char* question) {
 
 void writeToFile(char * filename, char * buffer, int buffer_size, int total_size, int fd, int * changed, int initial_size) {
     FILE * f = fopen(filename, "w+");
+    validateOpen(f, filename);
+
     printf("Opened: %s\n", filename);
     int available_size = initial_size;
     while (total_size > 0) {
@@ -125,6 +137,8 @@ void writeToFile(char * filename, char * buffer, int buffer_size, int total_size
 
 void readFromFile(char * filename, char * buffer, int buffer_size, int total_size, int fd) {
     FILE * f = fopen(filename, "r");
+    validateOpen(f, filename);
+
     printf("Reading from: %s\n", filename);
     printf("I have to write: %d\n", total_size);
     
@@ -159,6 +173,8 @@ void writeAuthorInformation(char * topic, char * question, char * userID, char *
     sprintf(filename, "%s%s/%s/.information", PREFIX, topic, question);
     
     FILE * f = fopen(filename, "w+");
+    validateOpen(f, filename);
+
     printf("%d\n", f);
     clearerr(f);
     fwrite(userID, sizeof(char), 5, f);
@@ -179,6 +195,8 @@ void answerWriteAuthorInformation(char * topic, char * question, char * userID, 
     sprintf(filename, "%s%s/%s/%s_%02d/.information", PREFIX, topic, question, question, answer_number);
     
     FILE * f = fopen(filename, "w+");
+    validateOpen(f, filename);
+
     printf("%s\n", filename);
     clearerr(f);
     fwrite(userID, sizeof(char), 5, f);
@@ -198,6 +216,7 @@ void getAuthorInformation(char * topic, char * question, char * userID, char * e
     char * filename = calloc(PREFIX_LEN + strlen(topic) + strlen(question) + 2 + 12 + 1, sizeof(char));
     sprintf(filename, "%s%s/%s/.information", PREFIX, topic, question);
     FILE * f = fopen(filename, "r");
+    validateOpen(f, filename);
 
     clearerr(f);
     fread(userID, 5, sizeof(char), f);
@@ -216,6 +235,7 @@ void getAnswerInformation(char * answer_dir, char * userID, char * ext) {
     char * filename = calloc(strlen(answer_dir) + 12 + 1, sizeof(char));
     sprintf(filename, "%s.information", answer_dir);
     FILE * f = fopen(filename, "r");
+    validateOpen(f, filename);
     
     clearerr(f);
     fread(userID, 5, sizeof(char), f);
@@ -272,6 +292,8 @@ void createQuestion(char * topic, char * question, char * text, int text_size, c
     }
 
     FILE * f = fopen(file_text, "w+");
+    validateOpen(f, file_text);
+
     clearerr(f);
     fwrite(text, sizeof(char), text_size, f);
     if (ferror(f)) {
@@ -285,6 +307,7 @@ void createQuestion(char * topic, char * question, char * text, int text_size, c
     fclose(f);
 
     f = fopen(file_img, "w+");
+    validateOpen(f, file_img);
     clearerr(f);
     fwrite(image, sizeof(char), image_size, f);
     if (ferror(f)) {
@@ -398,6 +421,8 @@ void createAnswer(char * topic, char * question, char * text, int text_size, cha
 
 
     FILE * f = fopen(file_text, "w+");
+    validateOpen(f, file_text);
+
     clearerr(f);
     fwrite(text, sizeof(char), text_size, f);
     if (ferror(f)) {
@@ -411,6 +436,7 @@ void createAnswer(char * topic, char * question, char * text, int text_size, cha
     fclose(f);
 
     f = fopen(file_img, "w+");
+    validateOpen(f, file_img);
     fwrite(image, sizeof(char), image_size, f);
     if (ferror(f)) {
         free(file_text);
@@ -443,18 +469,24 @@ List * getAnswers(char * topic, char * question, int * count) {
     int dir_count = 0;
     int dir_size = strlen(dir_name);
     char *answer = NULL;
+
     while (n-- > 0 && dir_count < 10)
-      if (namelist[n]->d_type == DT_DIR && strcmp(namelist[n]->d_name, ".") && strcmp(namelist[n]->d_name, "..")) {
-              answer = calloc(dir_size + strlen(namelist[n]->d_name) + 2, sizeof(char));
-              sprintf(answer, "%s%s/", dir_name, namelist[n]->d_name);
-              addEl(res, answer);
-              dir_count++;
-      }
+		if (namelist[n]->d_type == DT_DIR && strcmp(namelist[n]->d_name, ".") && strcmp(namelist[n]->d_name, "..")) {
+			answer = calloc(dir_size + strlen(namelist[n]->d_name) + 2, sizeof(char));
+			if (answer == NULL) {
+				perror("Error on calloc - getAnswers.\n");
+				exit(EXIT_FAILURE);
+			}
+			sprintf(answer, "%s%s/", dir_name, namelist[n]->d_name);
+			addEl(res, answer);
+			dir_count++;
+			printf("answer %d: %s\n", dir_count, answer);
+		}
 
     free(namelist);
     free(dir_name);
-    if (answer != NULL) free(answer);
     *count = dir_count;
+
     return res;
 }
 
