@@ -28,6 +28,7 @@ void validateReadWrite(FILE *f, char *filename) {
     if (ferror(f)) {
         if (filename != NULL) free(filename);
         fclose(f);
+        perror("File related error.\n");
         exit(1);
     }
 }
@@ -93,7 +94,10 @@ void eraseDirectory(char *topic, char* question) {
     char *dir =  calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 3,sizeof(char));
     sprintf(dir, "%s%s/%s/", PREFIX, topic, question);
 
-    if (remove(dir) < 0) exit(1);
+    if (remove(dir) < 0) {
+    	perror("Error removing directory.\n");
+    	exit(1);
+    }
     free(dir);
 }
 
@@ -109,6 +113,7 @@ void writeToFile(char * filename, char * buffer, int buffer_size, int total_size
             bzero(buffer, buffer_size);
             if ((available_size = read(fd, buffer, MIN(buffer_size, total_size))) < 0) {
                 fclose(f);
+                perror("Error writing on file.\n");
                 exit(1);
             }
             *changed = 1;
@@ -131,6 +136,7 @@ void readFromFile(char * filename, char * buffer, int buffer_size, int total_siz
         int n_bytes = write(fd, buffer, MIN(buffer_size, n));
         if (n_bytes < 0) {
             fclose(f);
+            perror("Error reading from file.\n");
             exit(1);
         }
         total_size -= n_bytes;
@@ -273,6 +279,7 @@ void createQuestion(char * topic, char * question, char * text, int text_size, c
         free(file_img);
         free(dir);
         fclose(f);
+        perror("Error writing on file - createQuestion.\n");
         exit(1);
     }
     fclose(f);
@@ -285,6 +292,7 @@ void createQuestion(char * topic, char * question, char * text, int text_size, c
         free(file_img);
         free(dir);
         fclose(f);
+        perror("Error writing on file - createQuestion.\n");
         exit(1);
     }
     fclose(f);
@@ -335,6 +343,7 @@ void answerEraseDirectory(char *topic, char *question, int answer_number) {
     sprintf(dir, "%s%s/%s/%s_%02d/", PREFIX, topic, question, question, answer_number);
     if (remove(dir) < 0) {
         free(dir);
+        perror("Error removing directory - answerEraseDirectory.\n");
         exit(1);
     }
     free(dir);
@@ -396,6 +405,7 @@ void createAnswer(char * topic, char * question, char * text, int text_size, cha
         free(file_img);
         free(dir);
         fclose(f);
+        perror("Error writing on file - createAnswer.\n");
         exit(1);
     }
     fclose(f);
@@ -407,6 +417,7 @@ void createAnswer(char * topic, char * question, char * text, int text_size, cha
         free(file_img);
         free(dir);
         fclose(f);
+        perror("Error writing on file - createAnswer.\n");
         exit(1);
     }
 
@@ -423,7 +434,7 @@ List * getAnswers(char * topic, char * question, int * count) {
     sprintf(dir_name, "%s%s/%s/", PREFIX, topic, question);
     n = scandir(dir_name, &namelist, NULL, alphasort);
     if (n == -1) {
-        perror("Error in scandir");
+        perror("Error in scandir - getAnswer.\n");
         exit(EXIT_FAILURE);
     }
 
