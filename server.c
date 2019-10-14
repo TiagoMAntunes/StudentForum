@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <signal.h>
+#include <sys/wait.h>
 #include <errno.h>
 
 #include "lib/hash.h"
@@ -31,8 +32,6 @@
 #define max(x, y) (x > y ? x : y)
 
 char port[6] = "58017";
-
-
 
 void get_img(char* filename, char* img, int size){
     FILE* f;
@@ -824,11 +823,15 @@ int main(int argc, char *argv[])
     FD_ZERO(&set);
 
     int maxfd = max(fd_tcp, fd_udp) + 1;
+	int status = 0;
 
     for (;;) {
+		while((pid = waitpid(-1, &status, WNOHANG)) > 0) {
+				printf("[DEBUG] Child process %d has finished and been gotten back with status: %d\n", pid, status);
+		}
+
         FD_SET(fd_tcp, &set);
         FD_SET(fd_udp, &set);
-
         int fd_ready = select(maxfd, &set, NULL, NULL, NULL);
 
         if (FD_ISSET(fd_tcp, &set)) {
@@ -1030,5 +1033,8 @@ int main(int argc, char *argv[])
             free(to_token);
 
         }
-    }
+	
+	FD_SET(fd_tcp, &set);
+	FD_SET(fd_udp, &set);
+	}
 }
