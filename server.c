@@ -875,9 +875,9 @@ int main(int argc, char *argv[])
     List *topics = newList();
     Hash *topics_hash = createTable(1024, sizeof(List));
     Hash *users = createTable(1024, sizeof(List));
-    int n_topics = 0;
+    int n_topics = getTopics(topics);
 
-
+	
     char hostname[1024], buffer[1024];
     hostname[1023] = '\0';
     gethostname(hostname, 1023);
@@ -1034,6 +1034,7 @@ int main(int argc, char *argv[])
                         addEl(topics, new);
                         insertInTable(topics_hash, new, hash(topic_title));
                         createTopicDir(topic_title);
+						registerTopic(topic_title, stringID);
                         n_topics++;
 
                         n = sendto(fd_udp, "PTR OK\n", 7, 0, (struct sockaddr *) &user_addr, user_addrlen);

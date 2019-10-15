@@ -503,6 +503,37 @@ List * getTopicQuestions(char * topic, int * list_size) {
     return list;
 }
 
+void getTopicUserID(char * topic, char * userID) {
+    char * filename = calloc(9 + strlen(topic) + 5 + 1, sizeof(char));
+    sprintf(filename, "./topics/%s/.uid", topic);
+    FILE * f = fopen(filename, "r");
+    fread(userID, sizeof(char), 5, f);
+    fclose(f);
+}
+
+void registerTopic(char * topic, char * userID) {
+    char * filename = calloc(9 + strlen(topic) + 5 + 1, sizeof(char));
+    sprintf(filename, "./topics/%s/.uid", topic);
+    FILE * f = fopen(filename, "w");
+    fwrite(userID, sizeof(char), 5, f);
+    fclose(f);
+}
+
+int getTopics(List * list) {
+    struct dirent * de;
+    DIR * dir = opendir("./topics");
+    if (dir == NULL) return 0;
+    int count = 0;
+    char userID[6] = {0};
+    while ((de = readdir(dir)) != NULL)
+        if (de->d_type == DT_DIR  && !strstr(de->d_name, ".") && !strstr(de->d_name, ".."))  {
+            getTopicUserID(de->d_name, userID);
+            addEl(list, createTopic(strdup(de->d_name), atoi(userID)));
+            count++;
+        }
+    return count;
+}
+
 int getNumberOfQuestions(char *topic) {
     struct dirent * de;
     char * dir_name = calloc(PREFIX_LEN + strlen(topic) + 1, sizeof(char));

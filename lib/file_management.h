@@ -10,6 +10,8 @@ List * getTopicQuestions(char * dir_name, int* list_size);
 int getNumberOfQuestions(char *topic);
 void createTopicDir(char *topic);
 int topicDirExists(char *topic);
+void registerTopic(char * topic, char * userID);
+int getTopics(List * topics);
 
 // Question
 int questionDirExists(char *topic, char *question);
