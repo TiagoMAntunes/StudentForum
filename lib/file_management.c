@@ -102,14 +102,14 @@ int validateDirectories(char * topic, char * question) {
 }
 
 void eraseDirectory(char *topic, char* question) {
-    char *dir =  calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 3,sizeof(char));
-    sprintf(dir, "%s%s/%s/", PREFIX, topic, question);
-
-    if (remove(dir) < 0) {
+    char *command =  calloc(7 + PREFIX_LEN + strlen(question) + strlen(topic) + 3,sizeof(char));
+    sprintf(command, "rm -rf %s%s/%s/", PREFIX, topic, question);
+    
+    if (system(command) < 0) {
     	perror("Error removing directory.\n");
     	exit(1);
     }
-    free(dir);
+    free(command);
 }
 
 void writeToFile(char * filename, char * buffer, int buffer_size, int total_size, int fd, int * changed, int initial_size) {
@@ -351,14 +351,14 @@ int answerDirectoriesValidationWithNumber(char * topic, char * question, int ans
 }
 
 void answerEraseDirectory(char *topic, char *question, int answer_number) {
-    char * dir = calloc(PREFIX_LEN + strlen(topic) + 1 + strlen(question) * 2 + 5 + 1,sizeof(char));
-    sprintf(dir, "%s%s/%s/%s_%02d/", PREFIX, topic, question, question, answer_number);
-    if (remove(dir) < 0) {
-        free(dir);
+    char * command = calloc(7 + PREFIX_LEN + strlen(topic) + 1 + strlen(question) * 2 + 5 + 1,sizeof(char));
+    sprintf(command, "rm -rf %s%s/%s/%s_%02d/", PREFIX, topic, question, question, answer_number);
+    if (system(command) < 0) {
+        free(command);
         perror("Error removing directory - answerEraseDirectory.\n");
         exit(1);
     }
-    free(dir);
+    free(command);
 }
 
 void answerWriteTextFile(char * question, char * topic, char * buffer, int buffer_size, int qsize, int fd, int * changed, int answer_number, int start_size) {
