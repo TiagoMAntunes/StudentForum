@@ -680,6 +680,7 @@ void TCP_input_validation(int fd) {
 		            char * answer_name = current(next(it));
 		            bzero(userID, 6); bzero(ext, 4);
 		            getAnswerInformation(answer_name, userID, ext);
+
 		            if (txtfile != NULL) free(txtfile);
 		            if (imgfile != NULL) free(imgfile);
 
@@ -692,7 +693,7 @@ void TCP_input_validation(int fd) {
 		            printf("I'm gonna read from %s\n", txtfile);
 		            readFromFile(txtfile, message, BUF_SIZE, txt_size, fd);
 
-		            qIMG = imgfile != NULL ? 1 : 0;
+		            qIMG = (ext[0] != '\0' ? 1 : 0);
 		            if (sprintf(message, " %d", qIMG) < 0) error_on("sprintf", "TCP_input_validation");
 		            printf("message: %s\n", message);
 		            if (write(fd, message, strlen(message)) < 0) error_on("write", "TCP_input_validation");
