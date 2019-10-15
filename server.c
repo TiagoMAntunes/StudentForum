@@ -955,12 +955,12 @@ int main(int argc, char *argv[])
                         if (list == NULL) error_on("malloc", "main");
                         int list_size = list_topics(topics, n_topics, list);
 
-                        char *message = malloc(sizeof(char) * (7 + list_size));
+                        char *message = malloc(sizeof(char) * (6 + ndigits(n_topics) + list_size));
                         if (message == NULL) error_on("malloc", "main");
 
                         if (sprintf(message, "LTR %d %s\n", n_topics, list) < 0) error_on("sprintf", "main");
 
-                        n = sendto(fd_udp, message, 6 + list_size + 1, 0, (struct sockaddr *) &user_addr, user_addrlen);
+                        n = sendto(fd_udp, message, strlen(message), 0, (struct sockaddr *) &user_addr, user_addrlen);
                         if (n < 0) error_on("sendto", "main");
 
                         free(list);
