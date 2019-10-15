@@ -461,7 +461,7 @@ void freeTopics(List *topics) {
 		}
 		int len_topic = strlen(token);
 
-		token = strtok(NULL, " ");
+		token = strtok(NULL, " \n");
 		if (token == NULL || strlen(token) > 10) {
 			free(aux);
 			return 0;
@@ -577,6 +577,7 @@ void TCP_input_validation(int fd) {
 
 					            // validate final \n
 					            token = strtok(qdata, "\n");
+											printf("Token is: %s\n", token);
 					            all_clear = (token == NULL ? 0 : 1);
 					        }
 					        if (all_clear) {
@@ -959,7 +960,7 @@ int main(int argc, char *argv[])
 
                         if (sprintf(message, "LTR %d %s\n", n_topics, list) < 0) error_on("sprintf", "main");
 
-                        n = sendto(fd_udp, message, 6 + list_size, 0, (struct sockaddr *) &user_addr, user_addrlen);
+                        n = sendto(fd_udp, message, 6 + list_size + 1, 0, (struct sockaddr *) &user_addr, user_addrlen);
                         if (n < 0) error_on("sendto", "main");
 
                         free(list);
@@ -1079,11 +1080,9 @@ int main(int argc, char *argv[])
                         }
                         killIterator(it);
                     }
-                    else {
-                    	msg_help++;
-                    }
 
                     *(msg_help) = '\n';
+										printf("Message is: %s . and msg_help has offset %d\n", message, msg_help - message);
                     printf("Char: %c with value %d\n", *msg_help, *msg_help);
                     printf("String: \"%s\" with size: %ld\n", message, strlen(message));
                     n = sendto(fd_udp, message, strlen(message), 0, (struct sockaddr *) &user_addr, user_addrlen);

@@ -273,7 +273,11 @@ char port[6] = "58017";
 	    char *token = strtok(answer, " \n");  // LTR
 	    token = strtok(NULL, " ");  //N
 	    n_topics = atoi(token);
-	    if (n_topics == 0) {
+			//if (topics_hash != NULL) deleteTable(topics_hash);
+			//if (topics != NULL) freeTopics(topics);
+			//topic = newList();
+			//topics_hash = createTable(1024, sizeof(List));
+			if (n_topics == 0) {
 	        printf("No topics available.\n");
 	    }
 	    else {
