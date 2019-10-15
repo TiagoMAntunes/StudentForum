@@ -214,21 +214,9 @@ void answerWriteAuthorInformation(char * topic, char * question, char * userID, 
 }
 
 void getAuthorInformation(char * topic, char * question, char * userID, char * ext) {
-    char * filename = calloc(PREFIX_LEN + strlen(topic) + strlen(question) + 2 + 12 + 1, sizeof(char));
-    sprintf(filename, "%s%s/%s/.information", PREFIX, topic, question);
-    FILE * f = fopen(filename, "r");
-    validateOpen(f, filename);
-
-    clearerr(f);
-    fread(userID, 5, sizeof(char), f);
-    validateReadWrite(f, filename);
-
-    getc(f);
-
-    fread(ext, 3, sizeof(char), f);
-    validateReadWrite(f, filename);
-
-    fclose(f);
+    char * filename = calloc(PREFIX_LEN + strlen(topic) + strlen(question) + 2 + 1, sizeof(char));
+    sprintf(filename, "%s%s/%s/", PREFIX, topic, question);
+    getAnswerInformation(filename, userID, ext);
     free(filename);
 }
 

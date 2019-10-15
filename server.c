@@ -469,7 +469,7 @@ void freeTopics(List *topics) {
 		}
 		int len_question = strlen(token);
 		free(aux);
-		return msg[4 + len_topic + len_question] == '\n';
+		return msg[5 + len_topic + len_question] == '\n';
 	}
 
 	// validate aIMG [iext isize]
@@ -604,7 +604,7 @@ void TCP_input_validation(int fd) {
 					        }
 					        else {
 					        	eraseDirectory(topic, question);
-					        	if (write(fd, "ERR\n", 4) < 0) error_on("write", "TCP_input_validation");
+					        	if (write(fd, "QUR ERR\n", 8) < 0) error_on("write", "TCP_input_validation");
 					    		printf("Returned wrong protocol information.\n");
 					        }
 					        free(qdata);
@@ -612,7 +612,7 @@ void TCP_input_validation(int fd) {
 					    }
 					    else {
 					    	eraseDirectory(topic, question);
-					    	if (write(fd, "ERR\n", 4) < 0) error_on("write", "TCP_input_validation");
+					    	if (write(fd, "QUR ERR\n", 8) < 0) error_on("write", "TCP_input_validation");
 					    	printf("Returned wrong protocol information.\n");
 					    }
 				    }
@@ -632,7 +632,7 @@ void TCP_input_validation(int fd) {
 	    	}
 		}
 		else {
-			if (write(fd, "ERR\n", 4) < 0) error_on("write", "TCP_input_validation");
+			if (write(fd, "QUR ERR\n", 8) < 0) error_on("write", "TCP_input_validation");
 			printf("Returned wrong protocol information.\n");
 		}
 
@@ -738,7 +738,7 @@ void TCP_input_validation(int fd) {
 	    	}
 	    }
 	    else {
-	    	if (write(fd, "ERR\n", 4) < 0) error_on("write", "TCP_input_validation");
+	    	if (write(fd, "QGR ERR\n", 8) < 0) error_on("write", "TCP_input_validation");
 	    	printf("Returned wrong protocol information.\n");
 	    }
 
@@ -831,7 +831,7 @@ void TCP_input_validation(int fd) {
 			        }
 			        else {
 			        	answerEraseDirectory(topic, question, answer_number);
-			        	if (write(fd, "ERR\n", 4) < 0) error_on("write", "TCP_input_validation");
+			        	if (write(fd, "ANR ERR\n", 8) < 0) error_on("write", "TCP_input_validation");
 			    		printf("Returned wrong protocol information.\n");
 			        }
 			        free(qdata);
@@ -857,7 +857,7 @@ void TCP_input_validation(int fd) {
 	    }
     }
     else {	// wrong protocol
-    	if (write(fd, "ERR\n", 4) < 0) error_on("write", "TCP_input_validation");
+    	if (write(fd, "ANR ERR\n", 8) < 0) error_on("write", "TCP_input_validation");
     	printf("Returned wrong protocol informarion.\n");
     }
 
