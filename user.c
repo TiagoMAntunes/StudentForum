@@ -695,19 +695,24 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
         else if (token != NULL && user_exists && (strcmp(token, "topic_select") == 0 || strcmp(token, "ts") == 0)) {
             if (tl_available) {
                 short_cmmd = strcmp(token, "ts") == 0 ? 1 : 0;
-                token = strtok(NULL, " ");
-                char *temp_topic = strdup(token);
-                if (temp_topic == NULL) error_on("strdup", "receive_input");
+                token = strtok(NULL, " \n");
+                if (token != NULL) {
+	                char *temp_topic = strdup(token);
+	                if (temp_topic == NULL) error_on("strdup", "receive_input");
 
-                if (!select_topic(topics, topics_hash, temp_topic, short_cmmd)) {
-                    printf("Invalid topic selected.\n");
-                }
-                else {                
-                    ql_available = FALSE;
-                    printf("Current topic: %s\n", topic);
-                }
+	                if (!select_topic(topics, topics_hash, temp_topic, short_cmmd)) {
+	                    printf("Invalid topic selected.\n");
+	                }
+	                else {                
+	                    ql_available = FALSE;
+	                    printf("Current topic: %s\n", topic);
+	                }
 
-                free(temp_topic);
+	                free(temp_topic);
+	            }
+	            else {
+	            	printf("Invalid command.\ntopic_select topic / ts topic_number\n");
+	            }
             }
             else
                 printf("Cannot select topic.\nYou must request topic list first.\n");
@@ -1065,7 +1070,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     if (close(fd_tcp) < 0) error_on("close", "receive_input"); 
                 } 
                 else {
-                    printf("Invalid command.\nquestion_get question / reg question_number\n");
+                    printf("Invalid command.\nquestion_get question / qg question_number\n");
                 }
             }
             else {
