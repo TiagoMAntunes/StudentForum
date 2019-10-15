@@ -750,7 +750,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             free(propose_topic);
         }
 
-        else if (token != NULL && user_exists && (strcmp(token, "question_list\n") == 0|| strcmp(token, "ql\n")) == 0) {
+        else if (token != NULL && user_exists && (strcmp(token, "question_list\n") == 0 || strcmp(token, "ql\n") == 0)) {
             if (topic != NULL) {
                 char * message;
                 int topic_len = strlen(topic);
