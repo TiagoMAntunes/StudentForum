@@ -316,7 +316,7 @@ void freeTopics(List *topics) {
 			return 0;
 
 	    char *token = strtok(msg, " \n"); // LTP
-	    if (token == NULL) 
+	    if (token == NULL)
 	    	return 0;
 
 	    token = strtok(NULL, " "); 	// nothing more
@@ -338,7 +338,7 @@ void freeTopics(List *topics) {
 	        return 0;
 	    }
 
-	    token = strtok(NULL, " ");	// topic
+	    token = strtok(NULL, " \n");	// topic
 	    if (token == NULL || strlen(token) > 10)
 	        return 0;
 
@@ -347,21 +347,21 @@ void freeTopics(List *topics) {
 	    return token == NULL;
 	}
 
-	int validate_LQU(char *msg) {   
+	int validate_LQU(char *msg) {
 		if (msg[strlen(msg) - 1] != '\n')
-			return 0;   
+			return 0;
 
 	    char *token = strtok(msg, " \n"); // LQU
-	    if (token == NULL) 
+	    if (token == NULL)
 	    	return 0;
 
-	    token = strtok(NULL, " "); // topic
+	    token = strtok(NULL, " \n"); // topic
 	    if (token == NULL || strlen(token) > 10)
 	        return 0;
 
 	    token = strtok(NULL, " ");	// nothing more
 	    return token == NULL;
-	}	
+	}
 
 	// validates QUS userID topic question qsize
 	int validate_QUS_ANS(char *msg, int is_qus) {
@@ -522,11 +522,11 @@ void TCP_input_validation(int fd) {
 
 		        if (topicDirExists(topic)) {
 
-			        if (validateDirectories(topic, question)) {	
+			        if (validateDirectories(topic, question)) {
 
 				        qdata = calloc(BUF_SIZE, sizeof(char));
 				        if (qdata == NULL) error_on("calloc", "TCP_input_validation");
-				        
+
 						int initial_size = MIN(qsize, BUF_SIZE - (aux - message));
 				        //sprintf(qdata, "%s", aux);
 				        memcpy(qdata, aux, initial_size);
@@ -534,19 +534,19 @@ void TCP_input_validation(int fd) {
 				        //in case there's some space available in the buffer, fill it in to avoid bad writes
 				        if (BUF_SIZE - (aux - message) < qsize) {
 				        	int bytes_read = read(fd, qdata + initial_size, BUF_SIZE - initial_size);
-				        	if (bytes_read < 0) error_on("read", "TCP_input_validation"); 
+				        	if (bytes_read < 0) error_on("read", "TCP_input_validation");
 				            initial_size += bytes_read;
 				        }
 
 				        int changed = 0;
 				        writeTextFile(question, topic, qdata, BUF_SIZE, qsize, fd, &changed, initial_size);
-				        
+
 				        if (changed){
 				            if (read(fd, message, BUF_SIZE) < 0) error_on("read", "TCP_input_validation");
 				            aux = message + 1;
 				        } else
-				            aux += qsize + 1; 
-				        
+				            aux += qsize + 1;
+
 				        if (validate_extra_QUS(aux)) {
 				        	printf("after extra validation\n");
 				        	int all_clear = 1;
@@ -616,7 +616,7 @@ void TCP_input_validation(int fd) {
 			if (write(fd, "ERR\n", 4) < 0) error_on("write", "TCP_input_validation");
 			printf("Returned wrong protocol information.\n");
 		}
-	    
+
     } else if(strcmp("GQU", prefix) == 0) {
     	if (validate_GQU(message)) {
 	        char topic[11], question[11], userID[6], ext[4];
@@ -650,7 +650,7 @@ void TCP_input_validation(int fd) {
 		        int txt_size = get_filesize(txtfile);
 		        sprintf(message, "QGR %s %d ", userID, get_filesize(txtfile));
 		        if (write(fd, message, strlen(message)) < 0) error_on("write", "TCP_input_validation");
-		        
+
 		        readFromFile(txtfile, message, BUF_SIZE, txt_size, fd);
 
 		        int qIMG = imgfile != NULL ? 1 : 0;
@@ -668,12 +668,12 @@ void TCP_input_validation(int fd) {
 		            aux += 1 + ndigits(answers_number);
 		        }
 		        else {
-		            if (sprintf(message, " 0\n") < 0) error_on("sprintf", "TCP_input_validation"); 
+		            if (sprintf(message, " 0\n") < 0) error_on("sprintf", "TCP_input_validation");
 		            aux += 3;
 		        }
-		        
+
 		        if (write(fd, message, aux - message) < 0) error_on("write", "TCP_input_validation");
-		        
+
 		        it = createIterator(answers);
 		        int question_count = 1;
 		        while (hasNext(it)) {
@@ -701,9 +701,9 @@ void TCP_input_validation(int fd) {
 		                int image_size = get_filesize(imgfile);
 		                if (sprintf(message, " %s %d ", ext, image_size) < 0) error_on("sprintf", "TCP_input_validation");
 		                if (write(fd, message, strlen(message)) < 0) error_on("write", "TCP_input_validation");
-		                
+
 		                readFromFile(imgfile, message, BUF_SIZE, image_size, fd);
-		                
+
 		            }
 		        }
 		        if (write(fd, "\n", 1) < 0) error_on("write", "TCP_input_validation");
@@ -752,14 +752,14 @@ void TCP_input_validation(int fd) {
 		    if (questionDirExists(topic, question) && (answer_number = answerDirectoriesValidation(topic, question)) < MAX_ANSWERS) {
 		        qdata = calloc(BUF_SIZE, sizeof(char));
 		        if (qdata == NULL) error_on("calloc", "TCP_input_validation");
-		        
+
 		        //sprintf(qdata, "%s", aux);
 				int initial_size = MIN(qsize, BUF_SIZE - (aux - message));
 		        memcpy(qdata, aux, initial_size);
 
 		        //in case there's some space available in the buffer, fill it in to avoid bad writes
 		        if (BUF_SIZE - (aux - message) < qsize)
-		            if ((initial_size += read(fd, qdata + initial_size, BUF_SIZE - initial_size)) < 0) 
+		            if ((initial_size += read(fd, qdata + initial_size, BUF_SIZE - initial_size)) < 0)
 		            	error_on("read", "TCP_input_validation");
 
 		        int changed = 0;
@@ -770,13 +770,13 @@ void TCP_input_validation(int fd) {
 		            if (read(fd, message, BUF_SIZE) < 0) error_on("read", "TCP_input_validation");
 		            aux = message + 1;
 		        } else
-		            aux += qsize + 1; 
-		        
+		            aux += qsize + 1;
+
 		        if (validate_extra_ANS(aux)) {
-		        
+
 			        token = strtok(aux, " ");
 			        qIMG = atoi(token);
-			        
+
 			        if (qIMG) {
 			            token = strtok(NULL, " ");
 			            if (sprintf(ext, "%s", token) < 0) error_on("sprintf", "TCP_input_validation");
@@ -803,7 +803,7 @@ void TCP_input_validation(int fd) {
 			        // validate final \n
 		            token = strtok(qdata, "\n");
 		            int all_clear = (token == NULL ? 0 : 1);
-		        
+
 			        if (all_clear) {
 			        	answerWriteAuthorInformation(topic, question, userID, ext, answer_number);
 			        	if (write(fd, "ANR OK\n", 7) < 0) error_on("write", "TCP_input_validation");
@@ -825,7 +825,7 @@ void TCP_input_validation(int fd) {
 		    else if (answer_number >= 99) {
 		    	if (write(fd, "ANR FUL\n", 8) < 0) error_on("write", "TCP_input_validation");
 		    	printf("Returned full list information.\n");
-		    } 
+		    }
 		    else {	// topic or question non existent
 		    	if (write(fd, "ANR NOK\n", 8) < 0) error_on("write", "TCP_input_validation");
 		    	printf("Returned invalid request information.\n");
@@ -933,8 +933,8 @@ int main(int argc, char *argv[])
             if (n == -1) error_on("recvfrom", "main");
 
             printf("Message received: %s\n", buffer);
-            char *to_validate = strdup(buffer); 
-            char *to_token = strdup(buffer);    
+            char *to_validate = strdup(buffer);
+            char *to_token = strdup(buffer);
             if (to_validate == NULL || to_token == NULL) error_on("strdup", "main");
 
             char * token = strtok(buffer, " \n");
@@ -1052,7 +1052,7 @@ int main(int argc, char *argv[])
                     //LQR N
                     if (sprintf(msg_help, "LQR %d", (n_questions == 0 ? 0 : n_questions)) < 0) error_on("sprintf", "main");
                     msg_help += (n_questions == 0 ? 5 : 4 + ndigits(n_questions));
-                    
+
                     //populate with the amount of questions
                     if (n_questions > 0) {
                         Iterator * it = createIterator(questions_list);
@@ -1077,7 +1077,7 @@ int main(int argc, char *argv[])
                             free(question);
                         }
                         killIterator(it);
-                    } 
+                    }
                     else {
                     	msg_help++;
                     }
@@ -1089,7 +1089,7 @@ int main(int argc, char *argv[])
                     if (n < 0) error_on("sendto", "main");
 
                     free(message);
-                    if (questions_list !=NULL) 
+                    if (questions_list !=NULL)
                     	listFree(questions_list);
                 }
                 else {
@@ -1102,7 +1102,7 @@ int main(int argc, char *argv[])
             free(to_token);
 
         }
-	
+
 	FD_SET(fd_tcp, &set);
 	FD_SET(fd_udp, &set);
 	}

@@ -325,7 +325,7 @@ char port[6] = "58017";
 	    }
 
 	    // free outdated list of questions
-	    if (questions_titles != NULL) 
+	    if (questions_titles != NULL)
 	        freeQuestions(questions_titles);
 
 	    questions_titles = newList();
@@ -358,7 +358,7 @@ char port[6] = "58017";
 	            n_answers[i] = token[i];
 	            i++;
 	        }
-	        
+
 	        n_answers[i] = 0;
 
 
@@ -425,7 +425,7 @@ char port[6] = "58017";
 	            printf("Register not successful\n");
 	        }
 	        else
-	            printf("Unexpected server response.\n");       
+	            printf("Unexpected server response.\n");
 	    }
 	}
 
@@ -433,9 +433,9 @@ char port[6] = "58017";
 	    char *token;
 
 	    token = strtok(answer, " ");
-	    if (token != NULL && strcmp(token, "PTR") != 0) 
+	    if (token != NULL && strcmp(token, "PTR") != 0)
 	        printf("Unexpected server response.\n");
-	    
+
 	    else {
 	        token = strtok(NULL, " \n");
 	        if (token != NULL && strcmp(token, "OK") == 0) {
@@ -487,7 +487,7 @@ char port[6] = "58017";
 	            if (question != NULL) free(question);
 	            question = strdup(submit_question);
 	            if (question == NULL) error_on("strdup", "receive_QUR");
-	            printf("Question successfully submitted.\nCurrent question: %s\n", question);       
+	            printf("Question successfully submitted.\nCurrent question: %s\n", question);
 	        }
 	        else if (token != NULL && strcmp(token, "NOK") == 0) {
 	            printf("Submission not successful\n");
@@ -499,10 +499,10 @@ char port[6] = "58017";
 	            printf("Question already exists. Question not submitted.\n");
 	        }
 	        else
-	            printf("Unexpected server response.\n");       
+	            printf("Unexpected server response.\n");
 	    }
 	    else {
-	         printf("Unexpected server response.\n"); 
+	         printf("Unexpected server response.\n");
 	    }
 	}
 
@@ -515,7 +515,7 @@ char port[6] = "58017";
 	    else if (token != NULL) {
 	        token = strtok(NULL, " \n");
 	        if (token != NULL && strcmp(token, "OK") == 0) {
-	            printf("Answer successfully submitted.\n");       
+	            printf("Answer successfully submitted.\n");
 	        }
 	        else if (token != NULL && strcmp(token, "NOK") == 0) {
 	            printf("Submission not successful\n");
@@ -524,10 +524,10 @@ char port[6] = "58017";
 	            printf("Answer list is full. Answer not submitted.\n");
 	        }
 	        else
-	            printf("Unexpected server response.\n");       
+	            printf("Unexpected server response.\n");
 	    }
 	    else {
-	         printf("Unexpected server response.\n"); 
+	         printf("Unexpected server response.\n");
 	    }
 	}
 
@@ -589,7 +589,7 @@ char port[6] = "58017";
 	    }
 	    while( (c = read(fd, *full_msg + n + current_offset, msg_size - current_offset - n)) != 0) {
 	        //printf("Value of c: %d\n", c);
-	        if (c < 0) 
+	        if (c < 0)
 
 	        if (c + n >= msg_size)
 	            msg_size *= 2;
@@ -685,7 +685,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             }
             else if (n == -1 && errno != EAGAIN) error_on("recvfrom", "receive_input");
             else {
-                if (receive_LTR_LQR(answer, "LTR")) 
+                if (receive_LTR_LQR(answer, "LTR"))
                     update_topic_list(topics, topics_hash, answer);
             }
 
@@ -703,7 +703,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 	                if (!select_topic(topics, topics_hash, temp_topic, short_cmmd)) {
 	                    printf("Invalid topic selected.\n");
 	                }
-	                else {                
+	                else {
 	                    ql_available = FALSE;
 	                    printf("Current topic: %s\n", topic);
 	                }
@@ -739,8 +739,8 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 }
                 else if (n == -1 && errno != EAGAIN) error_on("recvfrom", "receive_input");
                 else {
-                    receive_PTR(answer, &tl_available, propose_topic, userID, topics); 
-                }     
+                    receive_PTR(answer, &tl_available, propose_topic, userID, topics);
+                }
                 free(message);
             }
             else
@@ -803,7 +803,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                         killIterator(it);
                     }
 
-                    else 
+                    else
                         strcpy(question_title, token);
 
                     if (question != NULL) free(question);
@@ -822,7 +822,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     if (n == -1) error_on("connect", "receive_input");
 
                     write_TCP(fd_tcp, message, msg_size - 1);
-                    
+
                     //get answer
                     int n;
                     bzero(answer, 1024);
@@ -830,7 +830,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     if (n < 0) error_on("read", "receive_input");
 
                     token = strtok(answer, " ");
-                    if (strcmp(token, "QGR") != 0) 
+                    if (strcmp(token, "QGR") != 0)
                         printf("Unexpected server response.\n");
 
                     else {
@@ -845,7 +845,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                         else if (token != NULL) {
                             char qUserID[6];
                             sprintf(qUserID, "%s", token);
-                            
+
                             token = strtok(NULL, " ");
                             int qsize = atoi(token);
 
@@ -921,17 +921,17 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                                     while ((n = read(fd_tcp, answer, 1024)) == 0) ;
                                     if (n < 0) error_on("read", "receive_input");
                                     aux = answer + 1;
-                                } else 
+                                } else
                                     aux += isize + 1;
                             }
 
                             token = strtok(aux, " ");
                             int N = atoi(token);
                             aux = token + strlen(token) + 1;
-                            
+
                             printf("N = %d\n", N);
                             while (N-- > 0) {
-                                
+
                                 if (aux - answer >= n) {
                                     bzero(answer, 1024);
                                     while ((n = read(fd_tcp, answer, 1024)) == 0) ;
@@ -944,7 +944,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                                 token = strtok(aux, " ");
                                 int answer_number = atoi(token);
                                 aux = token + strlen(token) + 1;
-                                
+
                                 if (aux - answer >= n) {
                                     bzero(answer, 1024);
                                     while ((n = read(fd_tcp, answer, 1024)) == 0) ;
@@ -956,7 +956,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                                 token = strtok(aux , " ");
                                 strcpy(qUserID, token);
                                 aux = token +  strlen(token) + 1;
-                                
+
                                 if (aux - answer >= n) {
                                     bzero(answer, 1024);
                                     while ((n = read(fd_tcp, answer, 1024)) == 0) ;
@@ -967,7 +967,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                                 token = strtok(aux, " ");
                                 qsize = atoi(token);
                                 aux += strlen(token) + 1;
-                                
+
                                 if (aux - answer >= n) {
                                     bzero(answer, 1024);
                                     while ((n = read(fd_tcp, answer, 1024)) == 0) ;
@@ -980,7 +980,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                                 bzero(qdata, 1024);
                                 int initial_size = MIN(qsize, 1024 - (aux - answer));
                                 memcpy(qdata, aux, initial_size);
-                                
+
 
                                 if (1024 - (aux - answer) < qsize) {
                                 	int bytes_read = read(fd_tcp, qdata + initial_size, 1024 - initial_size);
@@ -996,7 +996,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                                     if (read(fd_tcp, answer, 1024) < 0) error_on("read", "receive_input");
                                     aux = answer + 1;
                                 } else
-                                    aux += qsize + 1; 
+                                    aux += qsize + 1;
 
                                 if (aux - answer >= n) {
                                     bzero(answer, 1024);
@@ -1009,7 +1009,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                                 token = strtok(aux, " ");
                                 qIMG = atoi(token);
                                 aux = token + strlen(token) + 1;
-                                
+
 
                                 if (qIMG) {
                                     if (aux - answer >= n) {
@@ -1028,7 +1028,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                                         if (n < 0) error_on("read", "receive_input");
                                         aux = answer;
                                     }
-                                    
+
                                     token = strtok(aux, " ");
                                     int aisize = atoi(token);
                                     aux = token + strlen(token) + 1;
@@ -1042,7 +1042,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                                     }
                                     bzero(qdata, 1024);
                                     int initial_size = MIN(aisize, 1024 - (aux - answer));
-                                    memcpy(qdata, aux, initial_size); 
+                                    memcpy(qdata, aux, initial_size);
 
                                     if (1024 - (aux - answer) < aisize) {
                                     	int bytes_read = read(fd_tcp, qdata + initial_size, 1024 - initial_size);
@@ -1067,14 +1067,14 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                         }
                     }
                     freeaddrinfo(res_tcp);
-                    if (close(fd_tcp) < 0) error_on("close", "receive_input"); 
-                } 
+                    if (close(fd_tcp) < 0) error_on("close", "receive_input");
+                }
                 else {
                     printf("Invalid command.\nquestion_get question / qg question_number\n");
                 }
             }
             else {
-                printf("Cannot select question.\nYou must request question list first.\n"); 
+                printf("Cannot select question.\nYou must request question list first.\n");
             }
         }
 
@@ -1101,7 +1101,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     if (text_file == NULL) error_on("malloc", "receive_input");
 
                     strcpy(text_file, token);
-    
+
                     token = strtok(NULL, " ");
                     if ((qIMG = token != NULL)){
                         image_file = strdup(token);
@@ -1155,11 +1155,11 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
                             free(image_file);
                             free(idata);
-                                 
+
                         }
                         else if (qIMG && !image_exists) {
                             free(idata);
-                            printf("Image file doesn't exist.\n");         
+                            printf("Image file doesn't exist.\n");
                         }
                         else {
                             msg_size = 17 + strlen(topic) + strlen(submit_question) + ndigits(qsize) + qsize;
@@ -1217,9 +1217,9 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     if (token[strlen(token) -1] == '\n')
                         token[strlen(token) -1] = '\0';
 
-                    text_file = calloc(strlen(token) + 5, sizeof(char));   
-                    if (text_file == NULL) error_on("calloc", "receive_input"); 
-                    if (sprintf(text_file, "%s.txt", token) < 0) error_on("sprintf", "receive_input");  
+                    text_file = calloc(strlen(token) + 5, sizeof(char));
+                    if (text_file == NULL) error_on("calloc", "receive_input");
+                    if (sprintf(text_file, "%s.txt", token) < 0) error_on("sprintf", "receive_input");
 
                     // answer image file
                     token = strtok(NULL, " ");
@@ -1279,7 +1279,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
                     // send request
                     write_TCP(fd_tcp, message, msg_size); //TODO receive server confirmation
-                    
+
                     // get answer
                     if(read(fd_tcp, answer, 1024) < 0) error_on("read", "receive_input");;
                     receive_ANR(answer);
@@ -1304,7 +1304,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
         else if (token != NULL && strcmp(token, "exit\n") == 0) {
             deleteTable(topics_hash);
             freeTopics(topics);
-            if (questions_titles != NULL) 
+            if (questions_titles != NULL)
                 freeQuestions(questions_titles);
             free(to_validate);
             if (topic != NULL) free(topic);
@@ -1364,7 +1364,7 @@ int main(int argc, char * argv[]) {
 
     struct timeval time;
     time.tv_sec = 2;
-    time.tv_usec = 0;   
+    time.tv_usec = 0;
     int n;
     if ((n = setsockopt(fd_udp, SOL_SOCKET, SO_RCVTIMEO, &time, sizeof(time))) < 0) {
         error_on("setsockopt", "receive_input");
