@@ -408,18 +408,19 @@ void freeTopics(List *topics) {
 
 	// validate qIMG [iext isize]
 	int validate_extra_QUS(char *msg) {
+		printf("validating: %s\n", msg);
 		char *aux = strdup(msg);
 		if (aux == NULL) error_on("strdup", "validate_extra_QUS");
 		char *token = strtok(aux, " ");
 
-		// qIMG
-		if (strcmp(token, "0\n") != 0 && strcmp(token, "1") != 0) {
+		// qIMG 
+		if (token != NULL && strcmp(token, "0\n") != 0 && strcmp(token, "1") != 0) {
 			free(aux);
 			return 0;
 		}
 
 		// there's an image
-		if (strcmp(token, "1") == 0) {
+		if (token != NULL && strcmp(token, "1") == 0) {
 			// 3 byte extension
 			token = strtok(NULL, " ");
 			if (strlen(token) != 3) {
@@ -429,7 +430,7 @@ void freeTopics(List *topics) {
 
 			// isize
 			token = strtok(NULL, " ");
-			int flag = token != NULL && is_number(token) && msg[6 + ndigits(atoi(token))] == ' ';
+			int flag = token != NULL && is_number(token) /* && msg[6 + ndigits(atoi(token))] == ' '*/;
 			free(aux);
 			return flag;
 		}
@@ -479,8 +480,9 @@ void freeTopics(List *topics) {
 
 
 void TCP_input_validation(int fd) {
-    char message[BUF_SIZE], prefix[4];
-    char * aux = message, * token;
+    char *message = malloc(sizeof(char) * BUF_SIZE);
+    char prefix[4];
+    char *aux = message, * token;
 
     bzero(message, BUF_SIZE);
     bzero(prefix, 4);
@@ -500,7 +502,7 @@ void TCP_input_validation(int fd) {
 	        bzero(ext, 4);
 
 	        // userID
-	        token = strtok(aux, " ");
+	        token = strtok(aux, " ");				
 	        sprintf(userID, "%s",token);
 
 	    	// topic
@@ -519,9 +521,7 @@ void TCP_input_validation(int fd) {
 		        qsize = atoi(token);
 
 		        aux = token + ndigits(qsize) + 1;
-
 		        if (topicDirExists(topic)) {
-
 			        if (validateDirectories(topic, question)) {
 
 				        qdata = calloc(BUF_SIZE, sizeof(char));
@@ -532,7 +532,10 @@ void TCP_input_validation(int fd) {
 				        memcpy(qdata, aux, initial_size);
 
 				        //in case there's some space available in the buffer, fill it in to avoid bad writes
-				        if (BUF_SIZE - (aux - message) < qsize) {
+				        int diff = BUF_SIZE - (aux - message);
+				        printf("diff = %d\n", diff);
+				        int init_size = initial_size;
+				        if (diff < qsize) {
 				        	int bytes_read = read(fd, qdata + initial_size, BUF_SIZE - initial_size);
 				        	if (bytes_read < 0) error_on("read", "TCP_input_validation");
 				            initial_size += bytes_read;
@@ -540,17 +543,24 @@ void TCP_input_validation(int fd) {
 
 				        int changed = 0;
 				        writeTextFile(question, topic, qdata, BUF_SIZE, qsize, fd, &changed, initial_size);
-
 				        if (changed){
 				            if (read(fd, message, BUF_SIZE) < 0) error_on("read", "TCP_input_validation");
 				            aux = message + 1;
-				        } else
-				            aux += qsize + 1;
-
+				        } 
+				        
+				        else if (!changed && init_size < qsize) {
+				        	free(message);
+				        	message = strdup(qdata);
+				            aux = message + qsize + 1;
+				        }
+				        else if (!changed && init_size == qsize) {
+				        	aux += qsize + 1;
+				        }
+				        
 				        if (validate_extra_QUS(aux)) {
-				        	printf("after extra validation\n");
 				        	int all_clear = 1;
-					        token = strtok(aux, " ");
+				        	char *helper = strdup(aux);
+					        token = strtok(helper, " ");
 					        qIMG = atoi(token);
 					        if (qIMG) {
 					            token = strtok(NULL, " ");
@@ -560,7 +570,15 @@ void TCP_input_validation(int fd) {
 					            isize = atoi(token);
 					            printf("Prepare to write: %d\n", isize);
 					            //reuse qdata for less memory
-					            aux = token + ndigits(isize) + 1;
+					           
+					            aux += 6 + ndigits(isize) + 1;
+					            int offset = aux - message;
+					            if (offset > 1024) {
+					            	bzero(message, BUF_SIZE);
+					            	if(read(fd, message, BUF_SIZE) < 0) error_on("read", "TCP_input_validation");
+					            	aux = message + 1;
+					            }
+
 								initial_size = MIN(isize, BUF_SIZE - (aux - message));
 					            memcpy(qdata, aux, initial_size);
 
@@ -577,7 +595,6 @@ void TCP_input_validation(int fd) {
 
 					            // validate final \n
 					            token = strtok(qdata, "\n");
-											printf("Token is: %s\n", token);
 					            all_clear = (token == NULL ? 0 : 1);
 					        }
 					        if (all_clear) {
@@ -591,6 +608,7 @@ void TCP_input_validation(int fd) {
 					    		printf("Returned wrong protocol information.\n");
 					        }
 					        free(qdata);
+					        free(helper);
 					    }
 					    else {
 					    	eraseDirectory(topic, question);
