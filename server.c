@@ -1077,7 +1077,6 @@ int main(int argc, char *argv[])
                             free(question);
                         }
                         killIterator(it);
-                        listFree(questions_list);
                     } 
                     else {
                     	msg_help++;
@@ -1090,6 +1089,8 @@ int main(int argc, char *argv[])
                     if (n < 0) error_on("sendto", "main");
 
                     free(message);
+                    if (questions_list !=NULL) 
+                    	listFree(questions_list);
                 }
                 else {
                     send_ERR_MSG_UDP(fd_udp, &res_udp);

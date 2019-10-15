@@ -1262,7 +1262,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                         message = malloc(sizeof(char) * (msg_size));
                         if (message == NULL) error_on("malloc", "receive_input");
 
-                        bzero(message, 1024);
+                        bzero(message, msg_size);
                         int k = sprintf(message, "ANS %d %s %s %d %s 0", userID, topic, question, asize, adata);
                         if (k < 0) error_on("sprintf", "receive_input");
                         message[k] = '\n';
