@@ -4,13 +4,23 @@ TARGETS=server/FS user/user
 SOURCES=server.c user.c
 OBJS = $(SOURCES:%.c=%.o)
 DEPENDENCIES=lib/list.o lib/iterator.o lib/hash.o lib/topic.o lib/file_management.o lib/question.o lib/answer.o
-all: $(TARGETS)
+all: directories $(TARGETS)
 
 server/FS: server.o $(DEPENDENCIES)
 	$(CC) $(FLAGS) $^ -o server/FS
 
 user/user: user.o $(DEPENDENCIES)
 	$(CC) $(FLAGS) $^ -o user/user
+
+directories: server/ user/
+
+server/:
+	mkdir server
+
+
+user/:
+	mkdir user
+
 
 server.o: server.c 
 user.o: user.c
