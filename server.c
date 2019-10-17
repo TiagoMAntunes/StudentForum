@@ -408,7 +408,6 @@ void freeTopics(List *topics) {
 
 	// validate qIMG [iext isize]
 	int validate_extra_QUS(char *msg) {
-		printf("validating: %s\n", msg);
 		char *aux = strdup(msg);
 		if (aux == NULL) error_on("strdup", "validate_extra_QUS");
 		char *token = strtok(aux, " ");
@@ -490,7 +489,7 @@ void TCP_input_validation(int fd) {
     //printf("Message: %s\n", message);
     memcpy(prefix, aux, 3);
     aux += 4;
-    printf("Prefix: %s\n", prefix);
+
     if (strcmp(prefix, "QUS") == 0) {
     	if (validate_QUS_ANS(message, 1)) {
 	        char topic[11], question[11], userID[6], * qdata, ext[4];
@@ -533,7 +532,7 @@ void TCP_input_validation(int fd) {
 
 				        //in case there's some space available in the buffer, fill it in to avoid bad writes
 				        int diff = BUF_SIZE - (aux - message);
-				        printf("diff = %d\n", diff);
+				
 				        int init_size = initial_size;
 				        if (diff < qsize) {
 				        	int bytes_read = read(fd, qdata + initial_size, BUF_SIZE - initial_size);
@@ -568,7 +567,7 @@ void TCP_input_validation(int fd) {
 
 					            token = strtok(NULL, " ");
 					            isize = atoi(token);
-					            printf("Prepare to write: %d\n", isize);
+					
 					            //reuse qdata for less memory
 					           
 					            aux += 6 + ndigits(isize) + 1;
@@ -584,7 +583,7 @@ void TCP_input_validation(int fd) {
 
 					            //in case there's some space available in the buffer, fill it in to avoid bad writes
 					            if (BUF_SIZE - (aux - message) < isize) {
-					                printf("Sizes: %d %ld\n", isize, initial_size);
+					
 
 					                if ((initial_size += read(fd, qdata + initial_size, BUF_SIZE - initial_size)) < 0)
 					                	error_on("read", "TCP_input_validation");
@@ -655,9 +654,9 @@ void TCP_input_validation(int fd) {
 		        List * answers = getAnswers(topic, question, &answers_number);
 
 		        Iterator * it = createIterator(answers);
-		        printf("Available answers:\n");
+		
 		        while (hasNext(it)) {
-		            printf("%s\n", (char*) current(next(it)));
+		
 		        }
 		        killIterator(it);
 
@@ -709,12 +708,12 @@ void TCP_input_validation(int fd) {
 		            if (sprintf(message, " %02d %s %d ", question_count++, userID, txt_size) < 0) error_on("sprintf", "TCP_input_validation");
 
 		            if (write(fd, message, strlen(message)) < 0) error_on("write", "TCP_input_validation");
-		            printf("I'm gonna read from %s\n", txtfile);
+		
 		            readFromFile(txtfile, message, BUF_SIZE, txt_size, fd);
 
 		            qIMG = (ext[0] != '\0' ? 1 : 0);
 		            if (sprintf(message, " %d", qIMG) < 0) error_on("sprintf", "TCP_input_validation");
-		            printf("message: %s\n", message);
+		
 		            if (write(fd, message, strlen(message)) < 0) error_on("write", "TCP_input_validation");
 
 		            if (qIMG) {
@@ -746,7 +745,7 @@ void TCP_input_validation(int fd) {
     	if (validate_QUS_ANS(message, 0)) {
 	        char topic[11], question[11], userID[6], * qdata, ext[4];
 	        int qsize, qIMG, isize;
-	        printf("ANS inside!\n");
+	
 
 	        bzero(topic, 11);
 	        bzero(question, 11);
@@ -803,7 +802,7 @@ void TCP_input_validation(int fd) {
 
 			            token = strtok(NULL, " ");
 			            isize = atoi(token);
-			            printf("Prepare to write: %d\n", isize);
+			
 			            //reuse qdata for less memory
 			            aux = token + ndigits(isize) + 1;
 
@@ -812,7 +811,7 @@ void TCP_input_validation(int fd) {
 
 			            //in case there's some space available in the buffer, fill it in to avoid bad writes
 			            if (BUF_SIZE - (aux - message) < isize) {
-			                printf("Sizes: %d %ld\n", isize, BUF_SIZE - (aux - message));
+			
 			                if ((initial_size += read(fd, qdata + initial_size, BUF_SIZE - initial_size)) < 0)
 			                	error_on("read", "TCP_input_validation");
 			            }
@@ -885,7 +884,7 @@ int main(int argc, char *argv[])
     if(argc==3){//custom port was set
         if(strcmp(argv[1], "-p") == 0){
             strcpy(port, argv[2]);
-            printf("new port is %s\n", port);
+
         }
     }
 
@@ -906,7 +905,7 @@ int main(int argc, char *argv[])
         if (fd_ready < 0) error_on("select", "main");
 
         if (FD_ISSET(fd_tcp, &set)) {
-            printf("Receiving from TCP client.\n");
+
             user_addrlen = sizeof(user_addr);
             if ((newfd = accept(fd_tcp, (struct sockaddr *)&user_addr, &user_addrlen)) == -1)
                 error_on("accept", "main");
@@ -917,7 +916,7 @@ int main(int argc, char *argv[])
                     error_on("fork", "main");
                 }
                 else if (pid == 0){ //Child process
-                    printf("dei fork\n");
+
                     //write(newfd, "Oi babyyy\n", 11);
 
                     int msg_size = MAX_REQ_LEN;
@@ -925,7 +924,7 @@ int main(int argc, char *argv[])
                     if (message == NULL) error_on("calloc", "main");
 
                     /*msg_size = read_TCP(newfd, &message, msg_size, 0);
-                    printf("Message received: %s\n", message);*/
+*/
                     freeaddrinfo(res_udp);
                     TCP_input_validation(newfd);
                     free(message);
@@ -942,14 +941,14 @@ int main(int argc, char *argv[])
             }
         }
         if (FD_ISSET(fd_udp, &set)) {
-            printf("Receiving from UDP client.\n");
+
             user_addrlen = sizeof(user_addr);
 
             bzero(buffer, 1024);
             int n = recvfrom(fd_udp, buffer, 1024, 0, (struct sockaddr *) &user_addr, &user_addrlen);
             if (n == -1) error_on("recvfrom", "main");
 
-            printf("Message received: %s\n", buffer);
+
             char *to_validate = strdup(buffer);
             char *to_token = strdup(buffer);
             if (to_validate == NULL || to_token == NULL) error_on("strdup", "main");
@@ -1009,21 +1008,21 @@ int main(int argc, char *argv[])
                         n = sendto(fd_udp, "PTR FUL\n", 8, 0, (struct sockaddr *) &user_addr, user_addrlen);
                         if (n == -1) error_on("sendto", "main");
 
-                        printf("Returned full list information.\n");
+
                     }
 
                     else if (!registered_user(users, atoi(stringID)) || strlen(topic_title) > 10) {
                         n = sendto(fd_udp, "PTR NOK\n", 8, 0, (struct sockaddr *) &user_addr, user_addrlen);
                         if (n == -1) error_on("sendto", "main");
 
-                        printf("Returned invalid request information.\n");
+
                     }
 
                     else if (topic_exists(topics, topic_title)) {
                         n = sendto(fd_udp, "PTR DUP\n", 8, 0, (struct sockaddr *) &user_addr, user_addrlen);
                         if (n == -1) error_on("sendto", "main");
 
-                        printf("Returned duplication information\n");
+
                     }
 
                     else {
@@ -1037,7 +1036,7 @@ int main(int argc, char *argv[])
                         n = sendto(fd_udp, "PTR OK\n", 7, 0, (struct sockaddr *) &user_addr, user_addrlen);
                         if (n == -1) error_on("sendto", "main");
 
-                        printf("Returned OK information\n");
+
                     }
 
                     free(stringID);
@@ -1045,7 +1044,7 @@ int main(int argc, char *argv[])
                 }
                 else {
                     send_ERR_MSG_UDP(fd_udp, &res_udp);
-                    printf("Returned wrong protocol information.\n");
+
                 }
 
 
@@ -1099,8 +1098,8 @@ int main(int argc, char *argv[])
 
                     *(msg_help) = '\n';
 										printf("Message is: %s . and msg_help has offset %d\n", message, msg_help - message);
-                    printf("Char: %c with value %d\n", *msg_help, *msg_help);
-                    printf("String: \"%s\" with size: %ld\n", message, strlen(message));
+
+
                     n = sendto(fd_udp, message, strlen(message), 0, (struct sockaddr *) &user_addr, user_addrlen);
                     if (n < 0) error_on("sendto", "main");
 

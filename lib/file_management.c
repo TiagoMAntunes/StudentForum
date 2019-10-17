@@ -79,10 +79,10 @@ int validateDirectories(char * topic, char * question) {
     char * dir = calloc(PREFIX_LEN + strlen(question) + strlen(topic) + 3,sizeof(char));
     struct stat sb;
     sprintf(dir, "%s%s/%s", PREFIX, topic, question);
-    printf("Dir: %s\n", dir);
-    printf("Checking directory %s\n", dir);
+
+
     if (stat(dir, &sb) == -1) {
-        printf("Directories missing. Creating...\n");
+
 
         mkdir(PREFIX, 0700);
 
@@ -116,7 +116,7 @@ void writeToFile(char * filename, char * buffer, int buffer_size, int total_size
     FILE * f = fopen(filename, "w+");
     validateOpen(f, filename);
 
-    printf("Opened: %s\n", filename);
+
     int available_size = initial_size;
     while (total_size > 0) {
         clearerr(f);
@@ -140,8 +140,8 @@ void readFromFile(char * filename, char * buffer, int buffer_size, int total_siz
     FILE * f = fopen(filename, "r");
     validateOpen(f, filename);
 
-    printf("Reading from: %s\n", filename);
-    printf("I have to write: %d\n", total_size);
+
+
 
     clearerr(f);
     int n = fread(buffer, sizeof(char), buffer_size, f);
@@ -155,8 +155,8 @@ void readFromFile(char * filename, char * buffer, int buffer_size, int total_siz
             exit(1);
         }
         total_size -= n_bytes;
- //       printf("wrote: %d\n", tmp - total_size);
- //       printf("total size is now: %d\n", total_size);
+ //
+ //
         if (total_size > 0) {
             clearerr(f);
             n = fread(buffer, sizeof(char), buffer_size, f);
@@ -164,8 +164,8 @@ void readFromFile(char * filename, char * buffer, int buffer_size, int total_siz
         }
 
     }
-    printf("Finished writing!\n");
-//    printf("Current total size: %d\n", total_size);
+
+//
     fclose(f);
 }
 
@@ -176,7 +176,7 @@ void writeAuthorInformation(char * topic, char * question, char * userID, char *
     FILE * f = fopen(filename, "w+");
     validateOpen(f, filename);
 
-    printf("%d\n", f);
+
     clearerr(f);
     fwrite(userID, sizeof(char), 5, f);
     validateReadWrite(f, filename);
@@ -198,7 +198,7 @@ void answerWriteAuthorInformation(char * topic, char * question, char * userID, 
     FILE * f = fopen(filename, "w+");
     validateOpen(f, filename);
 
-    printf("%s\n", filename);
+
     clearerr(f);
     fwrite(userID, sizeof(char), 5, f);
     validateReadWrite(f, filename);
@@ -263,13 +263,13 @@ void createQuestion(char * topic, char * question, char * text, int text_size, c
     sprintf(file_text, "%s%s/%s/question.txt", PREFIX, topic, question);
     sprintf(file_img, "%s%s/%s/image.%s", PREFIX, topic, question, ext);
     sprintf(dir, "%s%s/%s/", PREFIX, topic, question);
-    printf("%s\n%s\n", file_text, file_img);
+
 
     struct stat sb;
 
-    printf("Checking directory %s\n", dir);
+
     if (stat(dir, &sb) == -1) {
-        printf("Directories missing. Creating...\n");
+
 
         mkdir(PREFIX, 0700);
 
@@ -388,13 +388,13 @@ void createAnswer(char * topic, char * question, char * text, int text_size, cha
     sprintf(file_text, "%s%s/%s/%s_%02d/answer.txt", PREFIX, topic, question, question, answer_number);
     sprintf(file_img, "%s%s/%s/%s_%02d/image.%s", PREFIX, topic, question, question, answer_number, ext);
     sprintf(dir, "%s%s/%s/%s_%02d/", PREFIX, topic, question, question, answer_number);
-    printf("%s\n%s\n", file_text, file_img);
+
 
     struct stat sb;
 
-    printf("Checking directory %s\n", dir);
+
     if (stat(dir, &sb) == -1) {
-        printf("Directories missing. Creating...\n");
+
 
         mkdir(PREFIX, 0700);
 
@@ -483,7 +483,7 @@ List * getTopicQuestions(char * topic, int * list_size) {
     struct dirent * de;
     char * dir_name = calloc(PREFIX_LEN + strlen(topic) + 1, sizeof(char));
     sprintf(dir_name, "%s%s", PREFIX, topic);
-    printf("Opening: %s\n", dir_name);
+
     DIR * dir = opendir(dir_name);
 
     if (dir == NULL) return NULL;
@@ -493,7 +493,7 @@ List * getTopicQuestions(char * topic, int * list_size) {
     *list_size = 0;
     while((de = readdir(dir)) != NULL)
         if (!strstr(de->d_name, ".") && !strstr(de->d_name, "..")) {
-            printf("Found Question: %s\n", de->d_name);
+
             (*list_size)++;
             addEl(list, strdup(de->d_name));
         }
@@ -541,7 +541,7 @@ int getNumberOfQuestions(char *topic) {
     struct dirent * de;
     char * dir_name = calloc(PREFIX_LEN + strlen(topic) + 1, sizeof(char));
     sprintf(dir_name, "%s%s", PREFIX, topic);
-    printf("Opening: %s\n", dir_name);
+
     DIR * dir = opendir(dir_name);
 
     if (dir == NULL) return 0;
