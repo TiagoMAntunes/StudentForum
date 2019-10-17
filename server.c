@@ -867,9 +867,15 @@ void TCP_input_validation(int fd) {
 			            changed = 0;
 			            answerWriteImageFile(question, topic, qdata, BUF_SIZE, isize, fd, &changed, ext, answer_number, initial_size);
 			        }
-			        // validate final \n
-		            token = strtok(qdata, "\n");
-		            int all_clear = (token == NULL ? 0 : 1);
+					int all_clear = 1;
+			        /*if (n < isize) {
+						while((n = read(fd, message, BUF_SIZE)) == 0) ;
+						if (n < 0) error_on("read", "input_validation");
+						write(1, message, n);
+						
+						all_clear = !(n != 1 || message[0] != '\n');
+					} else
+						all_clear = message[n-1] == '\n';*/
 
 			        if (all_clear) {
 			        	answerWriteAuthorInformation(topic, question, userID, ext, answer_number);
