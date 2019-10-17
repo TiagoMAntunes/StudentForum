@@ -509,6 +509,7 @@ void getTopicUserID(char * topic, char * userID) {
     FILE * f = fopen(filename, "r");
     fread(userID, sizeof(char), 5, f);
     fclose(f);
+    free(filename);
 }
 
 void registerTopic(char * topic, char * userID) {
@@ -517,6 +518,7 @@ void registerTopic(char * topic, char * userID) {
     FILE * f = fopen(filename, "w");
     fwrite(userID, sizeof(char), 5, f);
     fclose(f);
+    free(filename);
 }
 
 int getTopics(List * list) {
@@ -528,9 +530,10 @@ int getTopics(List * list) {
     while ((de = readdir(dir)) != NULL)
         if (de->d_type == DT_DIR  && !strstr(de->d_name, ".") && !strstr(de->d_name, ".."))  {
             getTopicUserID(de->d_name, userID);
-            addEl(list, createTopic(strdup(de->d_name), atoi(userID)));
+            addEl(list, createTopic(de->d_name, atoi(userID)));
             count++;
         }
+    closedir(dir);
     return count;
 }
 

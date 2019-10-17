@@ -480,14 +480,14 @@ void freeTopics(List *topics) {
 
 
 void TCP_input_validation(int fd) {
-    char *message = malloc(sizeof(char) * BUF_SIZE);
+    char *message = calloc(BUF_SIZE + 1, sizeof(char));
     char prefix[4];
     char *aux = message, * token;
 
     bzero(message, BUF_SIZE);
     bzero(prefix, 4);
     if (read(fd, message, BUF_SIZE) == -1) error_on("read", "TCP_input_validation");
-    printf("Message: %s\n", message);
+    //printf("Message: %s\n", message);
     memcpy(prefix, aux, 3);
     aux += 4;
     printf("Prefix: %s\n", prefix);
@@ -678,7 +678,7 @@ void TCP_input_validation(int fd) {
 		            int image_size = get_filesize(imgfile);
 		            if (sprintf(message + 3, "%s %d ", ext, image_size) < 0) error_on("sprintf", "TCP_input_validation");
 		            if (write(fd, message, 3 + strlen(ext) + ndigits(image_size) + 2) < 0) error_on("write", "TCP_input_validation");
-		            if (write(1, message, 3 + strlen(ext) + ndigits(image_size) + 2) < 0) error_on("write", "TCP_input_validation");
+		            //if (write(1, message, 3 + strlen(ext) + ndigits(image_size) + 2) < 0) error_on("write", "TCP_input_validation");
 		            readFromFile(imgfile, message, BUF_SIZE, image_size, fd);
 		        }
 		        char * aux = message;
@@ -861,7 +861,7 @@ void TCP_input_validation(int fd) {
     	printf("Returned wrong protocol informarion.\n");
     }
 
-    printf("Son is finished!\n");
+    free(message);
 
 }
 
@@ -1066,7 +1066,7 @@ int main(int argc, char *argv[])
                     int n_questions = (questions_list == NULL ? 0 : listSize(questions_list));
 
                     //Create message data
-                    char * message = calloc(7 + ndigits(n_questions) + n_questions * (10 + 1 + 5 + 1 + 2), sizeof(char));
+                    char * message = calloc(7 + ndigits(n_questions) + n_questions * (10 + 1 + 5 + 1 + 2 + 1) + 1, sizeof(char));
                     if (message == NULL) error_on("calloc", "main");
                     char * msg_help = message;
 
