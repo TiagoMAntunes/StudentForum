@@ -486,7 +486,7 @@ void TCP_input_validation(int fd) {
 
     bzero(message, BUF_SIZE);
     bzero(prefix, 4);
-    while((n = read(fd, message, BUF_SIZE)) == 0) ;
+    while ((n = read(fd, message, BUF_SIZE)) == 0) ;
 	if (n < 0) error_on("read", "input_validation");
 	//printf("Message: %s\n", message);
     memcpy(prefix, aux, 3);
@@ -502,101 +502,126 @@ void TCP_input_validation(int fd) {
 	        bzero(userID, 6);
 	        bzero(ext, 4);
 
+			if (aux - message >= n) {
+				while((n = read(fd, message, BUF_SIZE)) == 0) ;
+				if (n < 0) error_on("read", "input_validation");
+				aux = message;
+			}
+
 	        // userID
 	        token = strtok(aux, " ");				
 	        sprintf(userID, "%s",token);
+			aux = token + strlen(token) + 1;
+
+
+			if (aux - message >= n) {
+				while((n = read(fd, message, BUF_SIZE)) == 0) ;
+				if (n < 0) error_on("read", "input_validation");
+				aux = message;
+			}
 
 	    	// topic
-	        token = strtok(NULL, " ");
+	        token = strtok(aux, " ");
 	        sprintf(topic, "%s", token);
-
+			aux = token + strlen(token) + 1;
 	        int n_questions = getNumberOfQuestions(topic);
 	        if (n_questions < MAX_QUESTIONS) {
 
+				if (aux - message >= n) {
+					while((n = read(fd, message, BUF_SIZE)) == 0) ;
+					if (n < 0) error_on("read", "input_validation");
+					aux = message;
+				}
+
 	        	// question
-		        token = strtok(NULL, " ");
+		        token = strtok(aux, " ");
 		        sprintf(question, "%s", token);
+				aux = token + strlen(token) + 1;
+				
+				if (aux - message >= n) {
+					while((n = read(fd, message, BUF_SIZE)) == 0) ;
+					if (n < 0) error_on("read", "input_validation");
+					aux = message;
+				}
 
 		        // qsize
-		        token = strtok(NULL, " ");
+		        token = strtok(aux, " ");
 		        qsize = atoi(token);
 
 		        aux = token + ndigits(qsize) + 1;
 		        if (topicDirExists(topic)) {
 			        if (validateDirectories(topic, question)) {
-
+						
 				        qdata = calloc(BUF_SIZE, sizeof(char));
 				        if (qdata == NULL) error_on("calloc", "TCP_input_validation");
 
-						int initial_size = MIN(qsize, BUF_SIZE - (aux - message));
-				        //sprintf(qdata, "%s", aux);
-				        memcpy(qdata, aux, initial_size);
+						if (aux - message >= n) {
+							bzero(message, 1024);
+							while ((n = read(fd, message, 1024)) == 0) ;
+							if (n < 0) error_on("read", "receive_input");
+							aux = message;
+						}
+						int initial_size = MIN(qsize, 1024 - (aux - message));
+						memcpy(qdata, aux, initial_size);
 
-				        //in case there's some space available in the buffer, fill it in to avoid bad writes
-				        int diff = BUF_SIZE - (aux - message);
-				
-				        int init_size = initial_size;
-				        if (diff < qsize) {
-				        	int bytes_read = read(fd, qdata + initial_size, BUF_SIZE - initial_size);
-				        	if (bytes_read < 0) error_on("read", "TCP_input_validation");
-				            initial_size += bytes_read;
-				        }
-
-				        int changed = 0;
+						int changed = 0;
 				        writeTextFile(question, topic, qdata, BUF_SIZE, qsize, fd, &changed, initial_size);
-				        if (changed){
-				            if (read(fd, message, BUF_SIZE) < 0) error_on("read", "TCP_input_validation");
-				            aux = message + 1;
-				        } 
 				        
-				        else if (!changed && init_size < qsize) {
-				        	free(message);
-				        	message = strdup(qdata);
-				            aux = message + qsize + 1;
-				        }
-				        else if (!changed && init_size == qsize) {
-				        	aux += qsize + 1;
-				        }
+						if (changed) {
+							bzero(message, 1024);
+							while ((n = read(fd, message, 1024)) == 0) ;
+							if (n < 0) error_on("read", "receive_input");
+							aux = message + 1;
+						} else {
+							aux += qsize + 1;
+						}
 				        
 				        if (validate_extra_QUS(aux)) {
 				        	int all_clear = 1;
-				        	char *helper = strdup(aux);
-					        token = strtok(helper, " ");
+							if (aux - message >= n) {
+								bzero(message, 1024);
+								while ((n = read(fd, message, 1024)) == 0) ;
+								if (n < 0) error_on("read", "receive_input");
+								aux = message;
+							}
+					        token = strtok(aux, " ");
 					        qIMG = atoi(token);
+							aux = token + strlen(token) + 1;
 					        if (qIMG) {
-					            token = strtok(NULL, " ");
+								if (aux - message >= n) {
+									bzero(message, 1024);
+									while ((n = read(fd, message, 1024)) == 0) ;
+									if (n < 0) error_on("read", "receive_input");
+									aux = message;
+								}
+					            token = strtok(aux, " ");
 					            if (sprintf(ext, "%s", token) < 0) error_on("sprintf", "TCP_input_validation");
+								aux = token + strlen(token) + 1;
 
-					            token = strtok(NULL, " ");
+								if (aux - message >= n) {
+									bzero(message, 1024);
+									while ((n = read(fd, message, 1024)) == 0) ;
+									if (n < 0) error_on("read", "receive_input");
+									aux = message;
+								}
+					            token = strtok(aux, " ");
 					            isize = atoi(token);
-					
-					            //reuse qdata for less memory
+								aux = token + strlen(token) + 1;
 					           
-					            aux += 6 + ndigits(isize) + 1;
-					            int offset = aux - message;
-					            if (offset > 1024) {
-					            	bzero(message, BUF_SIZE);
-					            	if(read(fd, message, BUF_SIZE) < 0) error_on("read", "TCP_input_validation");
-					            	aux = message + 1;
-					            }
+					            if (aux - message >= n) {
+									bzero(message, 1024);
+									while ((n = read(fd, message, 1024)) == 0) ;
+									if (n < 0) error_on("read", "receive_input");
+									aux = message;
+								}
 
 								initial_size = MIN(isize, BUF_SIZE - (aux - message));
 					            memcpy(qdata, aux, initial_size);
 
-					            //in case there's some space available in the buffer, fill it in to avoid bad writes
-					            if (BUF_SIZE - (aux - message) < isize) {
-					
-
-					                if ((initial_size += read(fd, qdata + initial_size, BUF_SIZE - initial_size)) < 0)
-					                	error_on("read", "TCP_input_validation");
-					            }
-
 					            changed = 0;
 					            writeImageFile(question, topic, qdata, BUF_SIZE, isize, fd, &changed, ext, initial_size);
 
-					            // validate final \n
-					            token = strtok(qdata, "\n");
-					            all_clear = (token == NULL ? 0 : 1);
+					            all_clear = 1;
 					        }
 					        if (all_clear) {
 					        	writeAuthorInformation(topic, question, userID, ext);
@@ -609,7 +634,6 @@ void TCP_input_validation(int fd) {
 					    		printf("Returned wrong protocol information.\n");
 					        }
 					        free(qdata);
-					        free(helper);
 					    }
 					    else {
 					    	eraseDirectory(topic, question);
