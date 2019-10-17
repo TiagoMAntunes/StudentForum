@@ -679,12 +679,7 @@ void TCP_input_validation(int fd) {
 		        int answers_number;
 		        List * answers = getAnswers(topic, question, &answers_number);
 
-		        Iterator * it = createIterator(answers);
-		
-		        while (hasNext(it)) {
-		
-		        }
-		        killIterator(it);
+		        Iterator * it;
 
 		        bzero(message, BUF_SIZE);
 		        getAuthorInformation(topic, question, userID, ext);
