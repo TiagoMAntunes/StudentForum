@@ -482,11 +482,13 @@ void TCP_input_validation(int fd) {
     char *message = calloc(BUF_SIZE + 1, sizeof(char));
     char prefix[4];
     char *aux = message, * token;
+	int n;
 
     bzero(message, BUF_SIZE);
     bzero(prefix, 4);
-    if (read(fd, message, BUF_SIZE) == -1) error_on("read", "TCP_input_validation");
-    //printf("Message: %s\n", message);
+    while((n = read(fd, message, BUF_SIZE)) == 0) ;
+	if (n < 0) error_on("read", "input_validation");
+	//printf("Message: %s\n", message);
     memcpy(prefix, aux, 3);
     aux += 4;
 
@@ -752,16 +754,46 @@ void TCP_input_validation(int fd) {
 	        bzero(userID, 6);
 	        bzero(ext, 4);
 
+			if (aux - message >= n) {
+				while((n = read(fd, message, BUF_SIZE)) == 0) ;
+				if (n < 0) error_on("read", "input_validation");
+				aux = message;
+			}
+
 	        token = strtok(aux, " ");
+			aux = token + strlen(token) + 1;
 	        if (sprintf(userID, "%s", token) < 0) error_on("sprintf", "TCP_input_validation");
 
-	        token = strtok(NULL, " ");
+
+			if (aux - message >= n) {
+				while((n = read(fd, message, BUF_SIZE)) == 0) ;
+				if (n < 0) error_on("read", "input_validation");
+				aux = message;
+			}
+
+
+	        token = strtok(aux, " ");
+			aux = token + strlen(token) + 1;
 	        if (sprintf(topic, "%s", token) < 0) error_on("sprintf", "TCP_input_validation");
 
-	        token = strtok(NULL, " ");
+
+			if (aux - message >= n) {
+				while((n = read(fd, message, BUF_SIZE)) == 0) ;
+				if (n < 0) error_on("read", "input_validation");
+				aux = message;
+			}
+
+	        token = strtok(aux, " ");
+			aux = token + strlen(token) + 1;
 	        if (sprintf(question, "%s", token) < 0) error_on("sprintf", "TCP_input_validation");
 
-	        token = strtok(NULL, " ");
+			if (aux - message >= n) {
+				while((n = read(fd, message, BUF_SIZE)) == 0) ;
+				if (n < 0) error_on("read", "input_validation");
+				aux = message;
+			}
+
+	        token = strtok(aux, " ");
 	        qsize = atoi(token);
 
 	        aux = token + ndigits(qsize) + 1;
@@ -772,7 +804,11 @@ void TCP_input_validation(int fd) {
 		        qdata = calloc(BUF_SIZE, sizeof(char));
 		        if (qdata == NULL) error_on("calloc", "TCP_input_validation");
 
-		        //sprintf(qdata, "%s", aux);
+				if (aux - message >= n) {
+					while((n = read(fd, message, BUF_SIZE)) == 0) ;
+					if (n < 0) error_on("read", "input_validation");
+					aux = message;
+				}
 				int initial_size = MIN(qsize, BUF_SIZE - (aux - message));
 		        memcpy(qdata, aux, initial_size);
 
@@ -785,7 +821,7 @@ void TCP_input_validation(int fd) {
 		        answerWriteTextFile(question, topic, qdata, BUF_SIZE, qsize, fd, &changed, answer_number, initial_size);
 
 
-		        if (changed){
+		        if (n - (aux - message) < qsize){
 		            if (read(fd, message, BUF_SIZE) < 0) error_on("read", "TCP_input_validation");
 		            aux = message + 1;
 		        } else
@@ -794,13 +830,25 @@ void TCP_input_validation(int fd) {
 		        if (validate_extra_ANS(aux)) {
 
 			        token = strtok(aux, " ");
+					aux = token + strlen(token) + 1;
 			        qIMG = atoi(token);
 
 			        if (qIMG) {
-			            token = strtok(NULL, " ");
+						if (aux - message >= n) {
+							while((n = read(fd, message, BUF_SIZE)) == 0) ;
+							if (n < 0) error_on("read", "input_validation");
+							aux = message;
+						}
+			            token = strtok(aux, " ");
+						aux = token + strlen(token) + 1;
 			            if (sprintf(ext, "%s", token) < 0) error_on("sprintf", "TCP_input_validation");
 
-			            token = strtok(NULL, " ");
+						if (aux - message >= n) {
+							while((n = read(fd, message, BUF_SIZE)) == 0) ;
+							if (n < 0) error_on("read", "input_validation");
+							aux = message;
+						}
+			            token = strtok(aux, " ");
 			            isize = atoi(token);
 			
 			            //reuse qdata for less memory
