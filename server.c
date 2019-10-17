@@ -899,10 +899,7 @@ int main(int argc, char *argv[])
 	int status = 0;
 
     for (;;) {
-		while((pid = waitpid(-1, &status, WNOHANG)) > 0) {
-				printf("[DEBUG] Child process %d has finished and been gotten back with status: %d\n", pid, status);
-		}
-
+		while((pid = waitpid(-1, &status, WNOHANG)) > 0);
         FD_SET(fd_tcp, &set);
         FD_SET(fd_udp, &set);
         int fd_ready = select(maxfd, &set, NULL, NULL, NULL);
