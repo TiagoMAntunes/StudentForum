@@ -71,6 +71,7 @@ int questionDirExists(char *topic, char *question) {
     struct stat sb;
 
     int flag = (stat(dir, &sb) == 0 ? 1 : 0);
+    printf("FLAG IS: %d\n", flag);
     free(dir);
     return flag;
 }
