@@ -815,8 +815,8 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     char * message = malloc(sizeof(char) * (msg_size+1));
                     if (message == NULL) error_on("malloc", "receive_input");
 
-                    int k = sprintf(message, "GQU %s %s\n", topic, question_title);
-                    //message[k] = '\n';
+                    sprintf(message, "GQU %s %s\n", topic, question_title);
+                    
 
                     fd_tcp = create_TCP(hostname,  &res_tcp);
                     n = connect(fd_tcp, res_tcp->ai_addr, res_tcp->ai_addrlen);
@@ -831,7 +831,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     if (n < 0) error_on("read", "receive_input");
 
                     token = strtok(answer, " ");
-                    if (token != NULL && strcmp(token, "QGR") != 0) 
+                    if (strcmp(token, "QGR") != 0) 
                         printf("Unexpected server response.\n");
 
                     else {
@@ -866,9 +866,8 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
                             int changed = 0;
                             writeTextFile(question, topic, qdata, 1024, qsize, fd_tcp, &changed, initial_size);
-                            printf("Question Files: \n");
-                            printf("1 - question.txt - %d bytes\n", qsize);
-
+                            printf("Question files:\n");
+                            printf("    1 - question.txt (%d bytes)\n", qsize);
                             if (changed) {
                                 bzero(answer, 1024);
                                 while ((n = read(fd_tcp, answer, 1024)) == 0) ;
@@ -887,7 +886,6 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                                 aux = answer;
                                 token = strtok(aux, " ");
                             }
-
                             int qIMG = atoi(token);
                             char ext[4] = {0};
                             if (qIMG) {
@@ -920,8 +918,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                                 }
                                 changed = 0;
                                 writeImageFile(question, topic, qdata, 1024, isize, fd_tcp, &changed, ext, initial_size);
-                                printf("2 - image.%s - %d bytes\n", ext, isize);
-
+                                printf("    2 - image.%s (%d bytes)\n", ext, isize);
                                 if(changed) {
                                     bzero(answer, 1024);
                                     while ((n = read(fd_tcp, answer, 1024)) == 0) ;
@@ -934,15 +931,15 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                             	bzero(answer, 1024);
                                 while ((n = read(fd_tcp, answer, 1024)) == 0) ;
                                 if (n < 0) error_on("read", "receive_input");
+                                aux = answer;
                             }
                             token = strtok(aux, " ");
                             int N = atoi(token);
                             aux = token + strlen(token) + 1;
-
-                            printf("%s\n", (N > 0 ? "Answers received:" : "Question without answers."));
+                            printf("%s\n", (N == 0? "No answers submitted." : "Answers:"));
                             int count = 1;
                             while (N-- > 0) {
-                                printf("  #%d with files:\n", count++);
+                                
                                 if (aux - answer >= n) {
                                     bzero(answer, 1024);
                                     while ((n = read(fd_tcp, answer, 1024)) == 0) ;
@@ -1002,7 +999,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
                                 changed = 0;
                                 answerWriteTextFile(question, topic, qdata, 1024, qsize, fd_tcp, &changed, answer_number, initial_size);
-                                printf("    1 - answer.txt - %d bytes\n", qsize);
+                                printf("    %d.1 - answer.txt (%d bytes)\n", count, qsize);
                                 if (changed){
                                     if (read(fd_tcp, answer, 1024) < 0) error_on("read", "receive_input");
                                     aux = answer + 1;
@@ -1065,10 +1062,11 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
                                     changed = 0;
                                     answerWriteImageFile(question, topic, qdata, 1024, aisize, fd_tcp, &changed, ext, answer_number, initial_size);
+                                    printf("    %d.1 - image.%s (%d bytes)\n", count, ext, aisize);
                                     n = 0;
-                                    printf("    2 - image.%s - %d bytes\n", ext, aisize);
                                 }
                                 answerWriteAuthorInformation(topic, question, qUserID, ext, answer_number);
+                            	count++;
                             }
 
                             writeAuthorInformation(topic, question, qUserID, ext);
@@ -1099,7 +1097,6 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                 int qIMG; //flag
                 char * aux = to_validate + strlen(token) + 1;
                 if (validate_qs_as_input(to_validate, 4)) {
-                    int exists;
 
                     // question title
                     token = strtok(aux, " ");
@@ -1130,7 +1127,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     }
 
                     //if filename has no ext, add .txt
-                    char *text_noext = strtok(text_file, ".");
+                    strtok(text_file, ".");
                     char aux[strlen(text_file) + 1];
                     strcpy(aux, text_file);
                     bzero(text_file, len_text_filename);
