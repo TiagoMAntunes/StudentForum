@@ -139,6 +139,7 @@ void send_ERR_MSG_UDP(int fd, struct addrinfo **res) {
     int n;
     n = sendto(fd, ERR_MSG, ERR_LEN, 0, (*res)->ai_addr, (*res)->ai_addrlen);
     if (n == -1) error_on("sento", "send_ERR_MSG_UDP");
+    printf("Returned wrong protocol information.\n");
 }
 
 int registered_user(Hash *users, int userID) {
@@ -488,11 +489,11 @@ void TCP_input_validation(int fd) {
     bzero(prefix, 4);
     while ((n = read(fd, message, BUF_SIZE)) == 0) ;
 	if (n < 0) error_on("read", "input_validation");
-	//printf("Message: %s\n", message);
     memcpy(prefix, aux, 3);
     aux += 4;
 
     if (strcmp(prefix, "QUS") == 0) {
+    	printf("Received request to submit question.\n");
     	if (validate_QUS_ANS(message, 1)) {
 	        char topic[11], question[11], userID[6], * qdata, ext[4];
 	        int qsize, qIMG, isize;
@@ -662,6 +663,7 @@ void TCP_input_validation(int fd) {
 		}
 
     } else if(strcmp("GQU", prefix) == 0) {
+    	printf("Received request to get question.\n");
     	if (validate_GQU(message)) {
 	        char topic[11], question[11], userID[6], ext[4];
 	        bzero(topic, 11);
@@ -763,6 +765,7 @@ void TCP_input_validation(int fd) {
 	    }
 
     } else if (strcmp("ANS", prefix) == 0) {
+    	printf("Received request to submit answer.\n");
     	if (validate_QUS_ANS(message, 0)) {
 	        char topic[11], question[11], userID[6], * qdata, ext[4];
 	        int qsize, qIMG, isize;
@@ -929,7 +932,7 @@ void TCP_input_validation(int fd) {
 	    }
     }
     else {	// wrong protocol
-    	if (write(fd, "ANR ERR\n", 8) < 0) error_on("write", "TCP_input_validation");
+    	if (write(fd, "ERR\n", 4) < 0) error_on("write", "TCP_input_validation");
     	printf("Returned wrong protocol informarion.\n");
     }
 
@@ -990,14 +993,10 @@ int main(int argc, char *argv[])
                 }
                 else if (pid == 0){ //Child process
 
-                    //write(newfd, "Oi babyyy\n", 11);
-
                     int msg_size = MAX_REQ_LEN;
                     char * message = calloc(msg_size, sizeof(char));
                     if (message == NULL) error_on("calloc", "main");
 
-                    /*msg_size = read_TCP(newfd, &message, msg_size, 0);
-*/
                     freeaddrinfo(res_udp);
                     TCP_input_validation(newfd);
                     free(message);
@@ -1028,14 +1027,17 @@ int main(int argc, char *argv[])
 
             char * token = strtok(buffer, " \n");
             if (token != NULL && strcmp(token, "REG") == 0) {
+            	printf("Received request to register user.\n");
                 if (validate_REG(to_validate)) {
                     n = sendto(fd_udp, "RGR OK\n", 7, 0, (struct sockaddr *) &user_addr, user_addrlen);
                 	if (n == -1) error_on("sendto", "main");
+                	printf("Returned OK information.\n");
                 }
                 else {
                     send_ERR_MSG_UDP(fd_udp, &res_udp);
                 }
             } else if (token != NULL && strcmp(token, "LTP") == 0) {
+            	printf("Received request to list topics.\n");
                 if (validate_LTP(to_validate)) {
                     if (n_topics > 0) {
                         char *list = (char*) malloc(sizeof(char) * 17 * n_topics);
@@ -1050,12 +1052,14 @@ int main(int argc, char *argv[])
                         n = sendto(fd_udp, message, strlen(message), 0, (struct sockaddr *) &user_addr, user_addrlen);
                         if (n < 0) error_on("sendto", "main");
 
+                        printf("Returned list of topics.\n");
                         free(list);
                         free(message);
                     }
                     else {
                         n = sendto(fd_udp, "LTR 0\n", 6, 0, (struct sockaddr *) &user_addr, user_addrlen);
                     	if (n < 0) error_on("sento", "main");
+                    	printf("Returned list of topics.\n");
                     }
                 }
                  else {
@@ -1063,6 +1067,7 @@ int main(int argc, char *argv[])
                 }
 
             } else if (strcmp(token, "PTP") == 0) {
+            	printf("Received request to propose topic.\n");
                 if (validate_PTP(to_validate)) {
                     token = strtok(to_token, " ");
 
@@ -1080,21 +1085,20 @@ int main(int argc, char *argv[])
                     if (n_topics == MAX_TOPICS) {
                         n = sendto(fd_udp, "PTR FUL\n", 8, 0, (struct sockaddr *) &user_addr, user_addrlen);
                         if (n == -1) error_on("sendto", "main");
-
-
+                        printf("Returned full list information.\n");
                     }
 
                     else if (!registered_user(users, atoi(stringID)) || strlen(topic_title) > 10) {
                         n = sendto(fd_udp, "PTR NOK\n", 8, 0, (struct sockaddr *) &user_addr, user_addrlen);
                         if (n == -1) error_on("sendto", "main");
-
+                        printf("Returned invalid request information.\n");
 
                     }
 
                     else if (topic_exists(topics, topic_title)) {
                         n = sendto(fd_udp, "PTR DUP\n", 8, 0, (struct sockaddr *) &user_addr, user_addrlen);
                         if (n == -1) error_on("sendto", "main");
-
+                        printf("Returned duplication information.\n");
 
                     }
 
@@ -1108,8 +1112,7 @@ int main(int argc, char *argv[])
 
                         n = sendto(fd_udp, "PTR OK\n", 7, 0, (struct sockaddr *) &user_addr, user_addrlen);
                         if (n == -1) error_on("sendto", "main");
-
-
+                        printf("Returned OK information.\n");
                     }
 
                     free(stringID);
@@ -1117,11 +1120,11 @@ int main(int argc, char *argv[])
                 }
                 else {
                     send_ERR_MSG_UDP(fd_udp, &res_udp);
-
                 }
 
 
             } else if (strcmp(token, "LQU") == 0) {
+            	printf("Received request to list questions.\n");
                 if (validate_LQU(to_validate)) {
                     token = strtok(to_token, " ");
                     token = strtok(NULL, " ");
@@ -1170,11 +1173,10 @@ int main(int argc, char *argv[])
                     }
 
                     *(msg_help) = '\n';
-										printf("Message is: %s . and msg_help has offset %d\n", message, msg_help - message);
-
 
                     n = sendto(fd_udp, message, strlen(message), 0, (struct sockaddr *) &user_addr, user_addrlen);
                     if (n < 0) error_on("sendto", "main");
+                    printf("Returned list of questions.\n");
 
                     free(message);
                     if (questions_list !=NULL)

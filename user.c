@@ -934,13 +934,13 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                                 while ((n = read(fd_tcp, answer, 1024)) == 0) ;
                                 if (n < 0) error_on("read", "receive_input");
                                 aux = answer;
-                                token = strtok(aux, " ");
                             }
-                            
+
                             token = strtok(aux, " ");
+                           
                             int N = atoi(token);
                             aux = token + strlen(token) + 1;
-                            printf("%s\n", (N == 0? "No answers submitted." : "Answers:"));
+                            printf("%s\n", (N == 0? "No answers submitted." : " Answers:"));
                             int count = 1;
                             while (N-- > 0) {
                                 
@@ -1075,7 +1075,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
                             writeAuthorInformation(topic, question, qUserID, ext);
 
-                            printf("Current question: %s\n", question);
+                            printf("\nCurrent question: %s\n", question);
                             used_tcp = 1;
                             free(message);
                         }
