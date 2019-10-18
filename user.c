@@ -680,17 +680,19 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
             n = sendto(fd_udp, message, 4, 0, res_udp->ai_addr, res_udp->ai_addrlen);
             if (n == -1) error_on("sendto", "receive_input");
 
-            n = recvfrom(fd_udp, answer, 1024, 0, res_udp->ai_addr, &res_udp->ai_addrlen);
+            char *tl_answer = malloc(sizeof(char) * 2048);
+            n = recvfrom(fd_udp, tl_answer, 2048, 0, res_udp->ai_addr, &res_udp->ai_addrlen);
             if (n < 0 && errno == EAGAIN) {
                 printf("Server didn't respond. Try again.\n");
             }
             else if (n == -1 && errno != EAGAIN) error_on("recvfrom", "receive_input");
             else {
-                if (receive_LTR_LQR(answer, "LTR")) 
-                    update_topic_list(topics, topics_hash, answer);
+                if (receive_LTR_LQR(tl_answer, "LTR")) 
+                    update_topic_list(topics, topics_hash, tl_answer);
             }
 
             free(message);
+            free(tl_answer);
         }
 
         else if (token != NULL && user_exists && (strcmp(token, "topic_select") == 0 || strcmp(token, "ts") == 0)) {
@@ -932,7 +934,9 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                                 while ((n = read(fd_tcp, answer, 1024)) == 0) ;
                                 if (n < 0) error_on("read", "receive_input");
                                 aux = answer;
+                                token = strtok(aux, " ");
                             }
+                            
                             token = strtok(aux, " ");
                             int N = atoi(token);
                             aux = token + strlen(token) + 1;
@@ -1062,7 +1066,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
                                     changed = 0;
                                     answerWriteImageFile(question, topic, qdata, 1024, aisize, fd_tcp, &changed, ext, answer_number, initial_size);
-                                    printf("    %d.1 - image.%s (%d bytes)\n", count, ext, aisize);
+                                    printf("    %d.2 - image.%s (%d bytes)\n", count, ext, aisize);
                                     n = 0;
                                 }
                                 answerWriteAuthorInformation(topic, question, qUserID, ext, answer_number);
