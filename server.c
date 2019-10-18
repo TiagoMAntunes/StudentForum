@@ -296,81 +296,142 @@ void freeTopics(List *topics) {
 
 // PROTOCOL VALIDATION
 	int validate_REG(char *msg) {
-		if (msg[strlen(msg) - 1] != '\n')
-			return 0;
+		int len = strlen(msg);
+		char *aux = strdup(msg);
+		if (aux == NULL) error_on("strdup", "validate_REG");
 
-	    char *token = strtok(msg, " \n"); // REG
-	    if (token == NULL) {
+		if (msg[len - 1] != '\n' || len != 10) {
+			free(aux);
+			return 0;
+		}
+
+	    char *token = strtok(aux, " \n"); // REG
+	    if (token == NULL || msg[3] != ' ' || msg[4] == ' ') {
+	    	free(aux);
 	    	return 0;
 	    }
 
 	    token = strtok(NULL, " "); 	// userID
 	    if (token == NULL) {
+	    	free(aux);
 	        return 0;
 	    }
 
-	    return verify_ID(token);
+	    int flag = verify_ID(token);
+	    free(aux);
+	    return flag;
 	}
 
 	int validate_LTP(char *msg) {
-		if (msg[strlen(msg) - 1] != '\n')
-			return 0;
+		int len = strlen(msg);
+		char *aux = strdup(msg);
+		if (aux == NULL) error_on("strdup", "validate_LTP");
 
-	    char *token = strtok(msg, " \n"); // LTP
-	    if (token == NULL)
+		if (msg[len - 1] != '\n' || len != 4) {
+			free(aux);
+			return 0;
+		}
+
+	    char *token = strtok(aux, " \n"); // LTP
+	    if (token == NULL) {
+	    	free(aux);
 	    	return 0;
+	    }
 
 	    token = strtok(NULL, " "); 	// nothing more
-
-	    return token == NULL;
+	    int flag = token == NULL ? 1 : 0;
+	    free(aux);
+	    return flag;
 	}
 
 	int validate_PTP(char *msg) {
-		if (msg[strlen(msg) - 1] != '\n')
-			return 0;
+		int len = strlen(msg);
+		char *aux = strdup(msg);
+		if (aux == NULL) error_on("strdup", "validate_PTP");
 
-	    char *token = strtok(msg, " \n");  // PTP
+		if (msg[len - 1] != '\n' || len < 12 || len > 21) {
+			free(aux);
+			return 0;
+		}
+
+	    char *token = strtok(aux, " \n");  // PTP
 	    if (token == NULL) {
+	    	free(aux);
 	    	return 0;
 	    }
 
 	    token = strtok(NULL, " "); 	// userID
 	    if (token == NULL || !verify_ID(token)) {
+	    	free(aux);
 	        return 0;
 	    }
 
 	    token = strtok(NULL, " \n");	// topic
-	    if (token == NULL || strlen(token) > 10)
+	    if (token == NULL || strlen(token) > 10) {
+	    	free(aux);
 	        return 0;
+	    }
+
+	    // spaces wrongly placed
+	    if (msg[3] != ' ' || msg[4] == ' ' || msg[9] != ' ' || msg[10] == ' ' || msg[10 + strlen(token)] != '\n') {
+	    	free(aux);
+	    	return 0;
+	    }
 
 	    token = strtok(NULL, " ");	// nothing more
-
-	    return token == NULL;
+	    int flag = token == NULL ? 1 : 0;
+	    free(aux);
+	    return flag;
 	}
 
 	int validate_LQU(char *msg) {
-		if (msg[strlen(msg) - 1] != '\n')
-			return 0;
+		int len = strlen(msg);
+		char *aux = strdup(msg);
+		if (aux == NULL) error_on("strdup", "validate_LQU");
 
-	    char *token = strtok(msg, " \n"); // LQU
-	    if (token == NULL)
+		if (msg[len - 1] != '\n' || len < 6|| len > 15) {
+			free(aux);
+			return 0;
+		}
+
+	    char *token = strtok(aux, " \n"); // LQU
+	    if (token == NULL) {
+	    	free(aux);
 	    	return 0;
+	    }
 
 	    token = strtok(NULL, " \n"); // topic
-	    if (token == NULL || strlen(token) > 10)
+	    if (token == NULL || strlen(token) > 10) {
+	    	free(aux);
 	        return 0;
+	    }
+
+	    // wrongly placed spaces
+	    if (msg[3] != ' ' || msg[4] == ' ' || msg[4 + strlen(token)] != '\n') {
+	    	free(aux);
+	    	return 0;
+	    }
 
 	    token = strtok(NULL, " ");	// nothing more
-	    return token == NULL;
+	    int flag = token == NULL ? 1 : 0;
+	    free(aux);
+	    return flag;
 	}
 
 	// validates QUS userID topic question qsize
 	int validate_QUS_ANS(char *msg, int is_qus) {
 		char *aux = strdup(msg);
+		printf("|%s|\n", msg);
 		if (aux == NULL) error_on("strdup", "validate_QUS_ANS");
 
 		char *token = strtok(aux, " ");	// QUS
 		if (token == NULL || (is_qus && strcmp(token, "QUS") != 0) || (!is_qus && strcmp(token, "ANS") != 0)) {
+			free(aux);
+			return 0;
+		}
+
+		// wrong spaces
+		if (msg[3] != ' ' || msg[4] == ' ') {
 			free(aux);
 			return 0;
 		}
@@ -382,6 +443,12 @@ void freeTopics(List *topics) {
 			return 0;
 		}
 
+		// wrong spaces
+		if (msg[9] != ' ' || msg[10] == ' ') {
+			free(aux);
+			return 0;
+		}
+
 		// topic
 		token = strtok(NULL, " ");	// topic
 		if (token == NULL || strlen(token) > 10) {
@@ -389,9 +456,21 @@ void freeTopics(List *topics) {
 			return 0;
 		}
 
+		// wrong spaces
+		if (msg[10 + strlen(token)] != ' ' || msg[11 + strlen(token)] == ' ') {
+			free(aux);
+			return 0;
+		}
+
 		// question
 		token = strtok(NULL, " ");	// question
 		if (token == NULL || strlen(token) > 10) {
+			free(aux);
+			return 0;
+		}
+
+		// wrong spaces
+		if (msg[14 + strlen(token)] != ' ' || msg[15 + strlen(token)] == ' ') {
 			free(aux);
 			return 0;
 		}
@@ -419,11 +498,24 @@ void freeTopics(List *topics) {
 			return 0;
 		}
 
+
 		// there's an image
 		if (token != NULL && strcmp(token, "1") == 0) {
+			// wrong spaces
+			if (msg[1] != ' ' || msg[2] == ' ') {
+				free(aux);
+				return 0;
+			}
+
 			// 3 byte extension
 			token = strtok(NULL, " ");
 			if (strlen(token) != 3) {
+				free(aux);
+				return 0;
+			}
+
+			// wrong spaces
+			if (msg[5] != ' ' || msg[6] == ' ') {
 				free(aux);
 				return 0;
 			}
@@ -455,14 +547,26 @@ void freeTopics(List *topics) {
 			return 0;
 		}
 
-		token = strtok(NULL, " ");
+		// wrong spaces
+		if (msg[3] != ' ' || msg[4] == ' ') {
+			free(aux);
+			return 0;
+		}
+
+		token = strtok(NULL, " ");	// topic
 		if (token == NULL || strlen(token) > 10) {
 			free(aux);
 			return 0;
 		}
 		int len_topic = strlen(token);
 
-		token = strtok(NULL, " \n");
+		// wrong spaces
+		if (msg[4 + len_topic] != ' ' || msg[5 + len_topic] == ' ') {
+			free(aux);
+			return 0;
+		}
+
+		token = strtok(NULL, " \n");	// question
 		if (token == NULL || strlen(token) > 10) {
 			free(aux);
 			return 0;

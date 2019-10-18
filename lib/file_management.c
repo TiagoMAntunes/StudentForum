@@ -71,7 +71,6 @@ int questionDirExists(char *topic, char *question) {
     struct stat sb;
 
     int flag = (stat(dir, &sb) == 0 ? 1 : 0);
-    printf("FLAG IS: %d\n", flag);
     free(dir);
     return flag;
 }
@@ -156,8 +155,6 @@ void readFromFile(char * filename, char * buffer, int buffer_size, int total_siz
             exit(1);
         }
         total_size -= n_bytes;
- //
- //
         if (total_size > 0) {
             clearerr(f);
             n = fread(buffer, sizeof(char), buffer_size, f);
@@ -166,7 +163,6 @@ void readFromFile(char * filename, char * buffer, int buffer_size, int total_siz
 
     }
 
-//
     fclose(f);
 }
 
@@ -470,7 +466,6 @@ List * getAnswers(char * topic, char * question, int * count) {
 			sprintf(answer, "%s%s/", dir_name, namelist[n]->d_name);
 			addEl(res, answer);
 			dir_count++;
-			printf("answer %d: %s\n", dir_count, answer);
 		}
 
     free(namelist);
