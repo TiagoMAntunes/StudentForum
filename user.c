@@ -831,7 +831,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                     if (n < 0) error_on("read", "receive_input");
 
                     token = strtok(answer, " ");
-                    if (strcmp(token, "QGR") != 0) 
+                    if (token != NULL && strcmp(token, "QGR") != 0) 
                         printf("Unexpected server response.\n");
 
                     else {
@@ -866,6 +866,8 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
                             int changed = 0;
                             writeTextFile(question, topic, qdata, 1024, qsize, fd_tcp, &changed, initial_size);
+                            printf("Question Files: \n");
+                            printf("1 - question.txt - %d bytes\n", qsize);
 
                             if (changed) {
                                 bzero(answer, 1024);
@@ -885,6 +887,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                                 aux = answer;
                                 token = strtok(aux, " ");
                             }
+
                             int qIMG = atoi(token);
                             char ext[4] = {0};
                             if (qIMG) {
@@ -917,6 +920,8 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                                 }
                                 changed = 0;
                                 writeImageFile(question, topic, qdata, 1024, isize, fd_tcp, &changed, ext, initial_size);
+                                printf("2 - image.%s - %d bytes\n", ext, isize);
+
                                 if(changed) {
                                     bzero(answer, 1024);
                                     while ((n = read(fd_tcp, answer, 1024)) == 0) ;
@@ -934,8 +939,10 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                             int N = atoi(token);
                             aux = token + strlen(token) + 1;
 
+                            printf("%s\n", (N > 0 ? "Answers received:" : "Question without answers."));
+                            int count = 1;
                             while (N-- > 0) {
-                                
+                                printf("  #%d with files:\n", count++);
                                 if (aux - answer >= n) {
                                     bzero(answer, 1024);
                                     while ((n = read(fd_tcp, answer, 1024)) == 0) ;
@@ -995,7 +1002,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
 
                                 changed = 0;
                                 answerWriteTextFile(question, topic, qdata, 1024, qsize, fd_tcp, &changed, answer_number, initial_size);
-
+                                printf("    1 - answer.txt - %d bytes\n", qsize);
                                 if (changed){
                                     if (read(fd_tcp, answer, 1024) < 0) error_on("read", "receive_input");
                                     aux = answer + 1;
@@ -1059,6 +1066,7 @@ void receive_input(char * hostname, char* buffer, int fd_udp, struct addrinfo *r
                                     changed = 0;
                                     answerWriteImageFile(question, topic, qdata, 1024, aisize, fd_tcp, &changed, ext, answer_number, initial_size);
                                     n = 0;
+                                    printf("    2 - image.%s - %d bytes\n", ext, aisize);
                                 }
                                 answerWriteAuthorInformation(topic, question, qUserID, ext, answer_number);
                             }
